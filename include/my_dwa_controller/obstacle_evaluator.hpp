@@ -7,9 +7,6 @@
 namespace my_dwa_controller
 {
 
-// Diagnostic output only: records the existing early-return branch.
-enum class ObstacleRejection {None, Empty, NonFinite, OutOfBounds, Inscribed, Lethal, Unknown};
-
 struct ObstacleEvaluation
 {
   bool collision_free = false;
@@ -24,8 +21,7 @@ struct ObstacleEvaluation
 /// 可行时返回最大代价和按轨迹点计算的平均代价，重复经过同一栅格也重复计入。
 /// 不可行时返回默认结果；本函数不修改轨迹或地图，也不缓存评估结果。
 ObstacleEvaluation evaluateTrajectory(
-  const Trajectory & trajectory, const nav2_costmap_2d::Costmap2D & costmap,
-  ObstacleRejection * rejection = nullptr);
+  const Trajectory & trajectory, const nav2_costmap_2d::Costmap2D & costmap);
 
 }  // 命名空间 my_dwa_controller
 

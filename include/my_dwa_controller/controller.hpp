@@ -9,7 +9,7 @@
 #include "nav2_core/controller.hpp"
 #include "nav_msgs/msg/path.hpp"
 #include "my_dwa_controller/path_handler.hpp"
-#include "my_dwa_controller/controller_diagnostics.hpp"
+#include "my_dwa_controller/obstacle_evaluator.hpp"
 #include "my_dwa_controller/trajectory_predictor.hpp"
 #include "my_dwa_controller/trajectory_scorer.hpp"
 #include "my_dwa_controller/velocity_sampler.hpp"
@@ -61,27 +61,20 @@ private:
     bool heading_enabled = false, angular_braking = false;
   };
 
-  struct CandidateScore
-  {
-    ScoreResult costs{};
-    double rotation_cost = 0.0;
-  };
-
   // All helpers run under the caller's state_mutex_; none re-lock it.
-  // Output contexts retain partial progress for exception diagnostics.
   void prepareControlInputs(
     const geometry_msgs::msg::PoseStamped & pose, const geometry_msgs::msg::Twist & velocity,
-    nav2_core::GoalChecker * goal_checker, ControlInputs & inputs, CycleDiagnostics & cycle) const;
+    nav2_core::GoalChecker * goal_checker, ControlInputs & inputs) const;
   void prepareGoalControl(const ControlInputs & inputs, GoalControlContext & goal);
   bool isGoalCandidateAllowed(
     const Velocity2D & candidate, const ControlInputs & inputs,
     const GoalControlContext & goal) const;
-  CandidateScore scoreCandidate(
+  ScoreResult scoreCandidate(
     const Trajectory & trajectory, const ObstacleEvaluation & obstacle,
     const ControlInputs & inputs, const GoalControlContext & goal) const;
   Velocity2D selectBestCandidate(
     const ControlInputs & inputs, const GoalControlContext & goal,
-    const std::vector<Velocity2D> & candidates, CycleDiagnostics & cycle) const;
+    const std::vector<Velocity2D> & candidates) const;
 
   // 状态锁串行保护路径、配置、限速和生命周期；不与地图锁反向嵌套。
   std::mutex state_mutex_;
@@ -109,10 +102,6 @@ private:
   double terminal_xy_tolerance_ = 0.25;  // GoalChecker fallback only.
   double terminal_yaw_tolerance_ = 0.05;  // GoalChecker fallback only.
   double sim_time_ = 1.7;
-
-  // Observer only; protected by the same Controller state lock.
-  ControllerDiagnostics diagnostics_;
-
 };
 
 }  // 命名空间 my_dwa_controller

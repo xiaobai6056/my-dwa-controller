@@ -148,7 +148,6 @@ void MyDWAController::configure(
   terminal_xy_tolerance_ = xy_fallback;
   terminal_yaw_tolerance_ = yaw_fallback;
   sim_time_ = sim_time;
-  diagnostics_.reset();
   RCLCPP_INFO(
     node->get_logger(), "Controller %s configured: max_v=%.3f, horizon=%.3f, forward_length=%.3f",
     plugin_name_.c_str(), configured_max_v_, sim_time, forward_length_);
@@ -235,19 +234,16 @@ void MyDWAController::setSpeedLimit(const double & speed_limit, const bool & per
 
 void MyDWAController::prepareControlInputs(
   const geometry_msgs::msg::PoseStamped & pose, const geometry_msgs::msg::Twist & velocity,
-  nav2_core::GoalChecker * goal_checker, ControlInputs & inputs, CycleDiagnostics & cycle) const
+  nav2_core::GoalChecker * goal_checker, ControlInputs & inputs) const
 {
   const auto local_frame = costmap_ros_->getGlobalFrameID();
   if (pose.header.frame_id != local_frame) {
     throw std::invalid_argument("robot pose frame must match costmap global frame");
   }
   // PathHandler 校验位姿和路径消息，并按本周期时间完成唯一一组路径 TF。
-  cycle.beginTiming(DiagnosticTiming::Path);
   inputs.local_path = path_handler_->getLocalPath(
     global_plan_, pose, local_frame,
     forward_length_, &inputs.distance_to_goal, &inputs.true_goal);
-  cycle.finishTiming();
-  cycle.recordPath(inputs.local_path);
   // One gate for all candidates, based on the actual robot and true goal.
   // getTolerances() is read-only; isGoalReached() would mutate a stateful checker.
   geometry_msgs::msg::Pose tolerance;
@@ -257,23 +253,16 @@ void MyDWAController::prepareControlInputs(
       tolerance.position.x >= 0.0 && tolerance.position.y >= 0.0)
     {
       inputs.terminal_radius = std::max(tolerance.position.x, tolerance.position.y);
-      cycle.xy_fallback = false;
     }
     try {
       geometry_msgs::msg::Pose yaw_pose;
       yaw_pose.orientation = tolerance.orientation;
       inputs.yaw_tolerance = std::abs(toPose2D(yaw_pose).theta);
-      cycle.yaw_fallback = false;
     } catch (const std::invalid_argument &) {
       // Unsupported quaternion fields leave the explicit fallback active.
     }
   }
-  cycle.follow_reference = lookAheadOnPath(
-    inputs.local_path, PathProjection{inputs.local_path.front(), 0, 0.0, 0.0},
-    follow_lookahead_).value().point;
   inputs.initial = toPose2D(pose.pose);
-  cycle.debug_pose = inputs.initial;
-  cycle.stage = "sampling";
   inputs.current = {velocity.linear.x, velocity.angular.z};
 }
 
@@ -339,82 +328,61 @@ bool MyDWAController::isGoalCandidateAllowed(
          (!goal.angular_braking && candidate.omega * goal.yaw_error < 0.0)));
 }
 
-MyDWAController::CandidateScore MyDWAController::scoreCandidate(
+ScoreResult MyDWAController::scoreCandidate(
   const Trajectory & trajectory, const ObstacleEvaluation & obstacle,
   const ControlInputs & inputs, const GoalControlContext & goal) const
 {
-  CandidateScore result;
+  ScoreResult result{};
 
   if (goal.phase == GoalPhase::Normal) {
-    result.costs = scorer_->score(
+    result = scorer_->score(
       trajectory, inputs.local_path, obstacle.mean_cost,
       goal.heading_enabled);
   } else {
-    result.rotation_cost = std::abs(
+    result.total_cost = std::abs(
       angleError(
         inputs.true_goal.theta,
         trajectory.poses.back().theta));
-    result.costs.total_cost = result.rotation_cost;
   }
   return result;
 }
 
 Velocity2D MyDWAController::selectBestCandidate(
   const ControlInputs & inputs, const GoalControlContext & goal,
-  const std::vector<Velocity2D> & candidates, CycleDiagnostics & cycle) const
+  const std::vector<Velocity2D> & candidates) const
 {
   std::optional<Velocity2D> best;
   double best_cost = std::numeric_limits<double>::infinity();
   auto * costmap = costmap_ros_->getCostmap();
   {
     // TF 已完成；仅在候选评估期间持有一次地图锁，所有候选读取同一地图状态。
-    cycle.beginTiming(DiagnosticTiming::MapLock);
     std::unique_lock<nav2_costmap_2d::Costmap2D::mutex_t> map_lock(*costmap->getMutex());
-    cycle.finishTiming();
     for (const auto & candidate : candidates) {
-      ++cycle.processed;
       if (!isGoalCandidateAllowed(candidate, inputs, goal)) {
-        ++cycle.terminal_rejected;
         continue;
       }
-      cycle.beginTiming(DiagnosticTiming::Prediction);
       const auto trajectory = predictor_->predict(inputs.initial, candidate);
-      cycle.finishTiming();
-      cycle.beginTiming(DiagnosticTiming::Obstacle);
-      ObstacleRejection rejection = ObstacleRejection::None;
-      const auto obstacle = evaluateTrajectory(trajectory, *costmap, &rejection);
-      cycle.finishTiming();
+      const auto obstacle = evaluateTrajectory(trajectory, *costmap);
       if (!obstacle.collision_free) {
-        ++cycle.rejected[static_cast<std::size_t>(rejection)];
         continue;
       }
-      cycle.recordValid(candidate);
-      cycle.beginTiming(DiagnosticTiming::Scoring);
       const auto score = scoreCandidate(trajectory, obstacle, inputs, goal);
-      cycle.finishTiming();
-      cycle.recordScored(candidate, score.costs, obstacle, score.rotation_cost);
       const bool same_speed_priority = !best || goal.phase != GoalPhase::Slowing ||
         candidate.v == best->v;
       const bool lower_speed = best && goal.phase == GoalPhase::Slowing &&
         candidate.v < best->v;
-      if (same_speed_priority && score.costs.total_cost == best_cost) {
-        ++cycle.ties;
-      }
       // Slowing is lexicographic: smallest collision-free reachable v, then yaw.
       // Ordinary navigation preserves its existing weighted score/tie policy.
       if (!best || lower_speed || (same_speed_priority &&
-        (score.costs.total_cost < best_cost ||
-        (score.costs.total_cost == best_cost &&
+        (score.total_cost < best_cost ||
+        (score.total_cost == best_cost &&
         std::abs(candidate.omega) < std::abs(best->omega)))))
       {
-        const bool strictly_better = lower_speed || score.costs.total_cost < best_cost;
         best = candidate;
-        best_cost = score.costs.total_cost;
-        cycle.recordBest(strictly_better);
+        best_cost = score.total_cost;
       }
     }
   }
-  cycle.stage = "selection";
   if (!best) {
     throw nav2_core::PlannerException("No collision-free feasible trajectory");
   }
@@ -425,66 +393,33 @@ geometry_msgs::msg::TwistStamped MyDWAController::computeVelocityCommands(
   const geometry_msgs::msg::PoseStamped & pose, const geometry_msgs::msg::Twist & velocity,
   nav2_core::GoalChecker * goal_checker)
 {
-  CycleTiming timing;
   std::lock_guard<std::mutex> state_lock(state_mutex_);
-  timing.stateLockAcquired();
   auto node = node_.lock();
-  CycleDiagnostics cycle(timing);
-  cycle.setInput(pose, velocity, {follow_lookahead_, heading_lookahead_, score_weights_});
+  if (!active_ || !node || !costmap_ros_) {
+    throw std::logic_error("controller is not active and configured");
+  }
+
   ControlInputs inputs;
   inputs.terminal_radius = terminal_xy_tolerance_;
   inputs.yaw_tolerance = terminal_yaw_tolerance_;
   GoalControlContext goal;
-  goal.sampling = sampling_config_;
-  goal.phase = goal_phase_;
-  goal.angular_cap = sampling_config_.max_w;
-  goal.approach_cap = sampling_config_.max_v;
-  const auto logger = node ? node->get_logger() : rclcpp::get_logger("my_dwa_controller");
-  const auto report_debug = [&](const char * error, bool failed = false) {
-      cycle.heading_enabled = goal.heading_enabled;
-      cycle.distance_to_goal = inputs.distance_to_goal;
-      cycle.terminal_radius = inputs.terminal_radius;
-      cycle.yaw_tolerance = inputs.yaw_tolerance;
-      cycle.true_goal = inputs.true_goal;
-      cycle.yaw_error = goal.yaw_error;
-      cycle.angular_cap = goal.angular_cap;
-      cycle.approach_cap = goal.approach_cap;
-      cycle.angular_braking = goal.angular_braking;
-      cycle.goal_phase = goal_phase_ == GoalPhase::Normal ? "normal" :
-        goal_phase_ == GoalPhase::Slowing ? "slowing" : "rotating";
-      diagnostics_.report(logger, cycle, error, failed);
-    };
-  try {
-    if (!active_ || !node || !costmap_ros_) {
-      throw std::logic_error("controller is not active and configured");
-    }
-    prepareControlInputs(pose, velocity, goal_checker, inputs, cycle);
-    prepareGoalControl(inputs, goal);
+  prepareControlInputs(pose, velocity, goal_checker, inputs);
+  prepareGoalControl(inputs, goal);
 
-    // The first (unconstrained) sampling inside prepareGoalControl must stay before
-    // phase updates; this second sampling uses the resulting reachable limits.
-    const auto candidates = sampleVelocities(inputs.current, goal.sampling);
-    cycle.recordSamples(candidates);
-    if (candidates.empty()) {
-      throw nav2_core::PlannerException("No candidate velocities in the dynamic window");
-    }
-    const auto best = selectBestCandidate(inputs, goal, candidates, cycle);
-
-    geometry_msgs::msg::TwistStamped command;
-    command.header.stamp = node->now();
-    command.header.frame_id = costmap_ros_->getBaseFrameID();
-    command.twist.linear.x = best.v;
-    command.twist.angular.z = best.omega;
-    cycle.stage = "output";
-    report_debug("none");
-    return command;
-  } catch (const std::exception & error) {
-    report_debug(error.what(), true);
-    throw;
-  } catch (...) {
-    report_debug("non-standard exception", true);
-    throw;
+  // The first (unconstrained) sampling inside prepareGoalControl must stay before
+  // phase updates; this second sampling uses the resulting reachable limits.
+  const auto candidates = sampleVelocities(inputs.current, goal.sampling);
+  if (candidates.empty()) {
+    throw nav2_core::PlannerException("No candidate velocities in the dynamic window");
   }
+  const auto best = selectBestCandidate(inputs, goal, candidates);
+
+  geometry_msgs::msg::TwistStamped command;
+  command.header.stamp = node->now();
+  command.header.frame_id = costmap_ros_->getBaseFrameID();
+  command.twist.linear.x = best.v;
+  command.twist.angular.z = best.omega;
+  return command;
 }
 
 }  // 命名空间 my_dwa_controller

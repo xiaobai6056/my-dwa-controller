@@ -9,18 +9,9 @@ namespace my_dwa_controller
 {
 
 ObstacleEvaluation evaluateTrajectory(
-  const Trajectory & trajectory, const nav2_costmap_2d::Costmap2D & costmap,
-  ObstacleRejection * rejection)
+  const Trajectory & trajectory, const nav2_costmap_2d::Costmap2D & costmap)
 {
-  // Observe the existing decision path; no extra costmap traversal.
-  const auto reject = [rejection](ObstacleRejection reason) {
-      if (rejection) {
-        *rejection = reason;
-      }
-    };
-  reject(ObstacleRejection::None);
   if (trajectory.poses.empty()) {
-    reject(ObstacleRejection::Empty);
     return {};
   }
 
@@ -28,21 +19,16 @@ ObstacleEvaluation evaluateTrajectory(
   double total_cost = 0.0;
   for (const auto & pose : trajectory.poses) {
     if (!std::isfinite(pose.x) || !std::isfinite(pose.y) || !std::isfinite(pose.theta)) {
-      reject(ObstacleRejection::NonFinite);
       return {};
     }
 
     unsigned int mx = 0;
     unsigned int my = 0;
     if (!costmap.worldToMap(pose.x, pose.y, mx, my)) {
-      reject(ObstacleRejection::OutOfBounds);
       return {};
     }
     const unsigned char cost = costmap.getCost(mx, my);
     if (cost >= nav2_costmap_2d::INSCRIBED_INFLATED_OBSTACLE) {
-      reject(cost == nav2_costmap_2d::NO_INFORMATION ? ObstacleRejection::Unknown :
-        cost == nav2_costmap_2d::LETHAL_OBSTACLE ? ObstacleRejection::Lethal :
-        ObstacleRejection::Inscribed);
       return {};
     }
     max_cost = std::max(max_cost, cost);

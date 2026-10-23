@@ -179,7 +179,6 @@ endif()
 
 add_library(${PROJECT_NAME} SHARED
   src/controller.cpp
-  src/controller_diagnostics.cpp
 )
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 
@@ -222,12 +221,6 @@ if(BUILD_TESTING)
   )
   ament_target_dependencies(test_controller nav2_core pluginlib rclcpp_lifecycle)
   add_dependencies(test_controller ${PROJECT_NAME})
-
-  ament_add_gtest(test_controller_diagnostics test/test_controller_diagnostics.cpp
-    src/controller_diagnostics.cpp)
-  target_compile_features(test_controller_diagnostics PRIVATE cxx_std_17)
-  target_include_directories(test_controller_diagnostics PRIVATE include)
-  ament_target_dependencies(test_controller_diagnostics rclcpp nav2_costmap_2d geometry_msgs)
 endif()
 
 install(DIRECTORY include/
