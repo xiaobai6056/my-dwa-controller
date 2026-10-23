@@ -1,0 +1,97 @@
+"""Build a concise evidence-linked report from checked diagnosis outputs."""
+import json
+from pathlib import Path
+import re
+
+HERE=Path(__file__).resolve().parent
+
+
+def load(path):return json.loads(path.read_text())
+
+
+def main():
+    scores=load(HERE/'outputs/score_summary.json');score_by={r['run']:r for r in scores}
+    maps=load(HERE/'outputs/maps_summary.json');bags=load(HERE/'outputs/bag_summary.json')
+    critical=load(HERE/'outputs/critical_decisions.json');audit=load(HERE/'evidence/final_audit.json')
+    tests=(HERE/'evidence/all_tests.log').read_text();n_tests=int(re.search(r'Ran (\d+) tests',tests).group(1))
+    assert tests.rstrip().endswith('OK') and audit['pass']
+    order=[('S04','first_S04'),('S05','first_S05'),('D01 2s（旧linked）','diagnostic_t2_linked'),
+           ('D01 3s','first_D01_t3'),('D01 4s（旧linked）','diagnostic_t4_linked'),
+           ('D01 5s','first_D01_t5'),('D01 6s','first_D01_t6'),('D02','first_D02')]
+    lines=['# MyDWA 基线诊断 · 2026-10-21','',
+        '结论：均值确实压低局部高膨胀代价，现有障碍项也确实影响部分选择；但本次证据不能把典型D01失败归为“均值稀释导致选错”。更强的解释是：基于当前静态地图的轨迹评价缺少障碍未来运动/安全等待约束，叠加速度和路径跟随偏好。历史地图有部分额外线索，但发布时间较粗，表面变化会误报；尚不足以支持直接上线时序风险模块。','',
+        '## 范围与版本','',
+        '- **源码事实**：原始评分、策略、参数、场景和控制插件均未修改，也未重新编译。只新增本诊断目录；Top-K仅作离线统计，未生成Top-K总分、替代排序、在线模块或Shadow Mode。',
+        '- Git HEAD `1bad3b66aa64384d5955f1933dcfb5c1017dcd62`，保留原有dirty Controller/头文件/.gitignore。Release冻结清单29项源码/config/test散列与当前一致；不能把早期v1.1静态结果当作同一源码构建。',
+        '- 新6次运行均由进程映射确认加载既有Release `cceb8c0630836b22916da5e839176497acddabc38cb65028fa3283e5daca85ee`，全部controller_server运行参数与旧linked基线相等。ROS2 Humble / Nav2 1.1.20。',
+        '- **实测**：新补采S04、S05、D01的3/5/6s、D02各一次；D01的2/4s复用已有完整linked候选记录。旧正式D01各时机3次、D02三次及所有旧失败都在清单保留，不按结果选择或替换重复。新6次无基础设施失败，因此未再重复。',
+        '- 动态旧runner有硬编码默认安装库散列；D02 summary中的该值仅代表underlay。实际加载以`runs/*/plugin_maps.txt`与manifest为准，差异在`evidence/final_audit.json`明确保留。','',
+        '## 覆盖与结果','',
+        '|条件|本次来源|结局|轨迹/评分周期|O改变严格偏好的周期/普通导航周期|计算p95 ms|',
+        '|---|---|---|---:|---:|---:|']
+    for label,key in order:
+        r=score_by[key];outcome='物理接触后取消' if r['contact_source_relative_s'] is not None else r['action_result']
+        lines.append(f"|{label}|{'复用旧诊断' if r['historical'] else '新补采1次'}|{outcome}|{r['raw_cycles_read']}|{r['obstacle_term_decisive_cycles']}/{r['ordinary_pre_contact_cycles']}|{r['compute_ms']['p95']:.2f}|")
+    lines += ['',
+        f"共{sum(r['raw_cycles_read'] for r in scores)}个原始周期；离线核验 **{audit['score_verification']['scored_candidates_checked']:,}个已评分候选＋{audit['score_verification']['rejected_candidates_checked']:,}个拒绝候选**，端点、可行性、可行候选mean/max、普通阶段加权和及选择顺序的已核验项无不一致。旧探针在无best时缺精确初始位姿，共8周期不能重建；另2周期无候选。它们仍保留在周期/耗时分母，不填造轨迹。",
+        '“O改变偏好”仅做已有加权贡献归因：移除该贡献后其他候选出现严格较低剩余成本；不是在线运行的新策略，也不等于该选择更安全。终点减速按v优先的原始规则导出，旋转阶段不把yaw代价混成五项加权和。',
+        '所有运行日志中未出现控制周期超时警告。探针计算时间包括采集、另列序列化构造时间，但最终文件写入/flush不在该时间里；没有同一随机初态的负载配对实验，因此不能宣称观察器完全无扰动。','',
+        '## 1. 障碍评分是否影响不合理选择？','',
+        '**源码事实**：`src/obstacle_evaluator.cpp:11–53`只检测离散中心点，原始值≥253或越界立即拒绝；其余点按次数等权求mean，重复格重复计入。`src/trajectory_scorer.cpp:120–137`将mean/252与S/G/P/H加权。权重为0.10/0.10/0.60/0.20/0.05；G是跟随前视点距离项，G/P不截断到1。`src/controller.cpp:281–345,348–425`包含终点制动/阶段选择，但没有障碍运动预测或遇障制动等待策略。','',
+        '**实测关键周期**（时间相对各自导航dispatch；safe key沿用旧条件模型，不是精确物理最后制动点）：','',
+        '|D01|选中v / 低速v|选中mean/max/Top5|低速mean/max/Top5|低速相对选中 ΔO/ΔS/ΔG/ΔP/ΔH|Δ总分|',
+        '|---|---|---|---|---|---:|']
+    for r in critical:
+        a=r['selected'];b=r['slowest_best'];delta=r['weighted_delta_slowest_minus_selected']
+        lines.append(f"|{r['run']} t={r['t']:.3f}|{a['v']:.3f}/{b['v']:.3f}|{a['mean']:.2f}/{a['max']}/{a['topk_sample_mean']:.1f}|{b['mean']:.2f}/{b['max']}/{b['topk_sample_mean']:.1f}|"+
+                     '/'.join(f'{delta[t]:+.4f}' for t in 'OSGPH')+f"|{delta['total']:+.4f}|")
+    lines += ['',
+        '- 2s条件中，较低均值给低速候选的O优势仅约0.0035，被速度与跟随项抵消。选中轨迹即便按其max计算，O可增加的上界也只有约0.0040，远小于0.1737总分差；这是上界分析，没有实现替代评分。',
+        '- 4s条件中，选中与低速候选的采样路径代价都为0，Top-K也为0。同一锁内地图固定横穿ROI有51个lethal格，说明“地图中存在障碍”与“当前恒速候选会经过其当前占据格”是不同问题；不能由此认定那些格的观测年龄。',
+        '- 2s关键周期该ROI有80个lethal格。已知的高代价并非完全被平均消掉，当前目标偏好与缺少未来动态约束共同值得关注。',
+        '- **结论边界**：证明了评分影响、局部稀释及前进偏好；未证明某条被拒选的恒速候选能完成整个动态相遇，也未用相同初态改评分重放。因此“不合理选择由均值造成”仍未成立。','',
+        '![原始贡献分解](outputs/figures/critical_weighted_contributions.png)','',
+        '## 2. Top-K可能增加什么信息？','',
+        '离线固定K=5，分别计算“35个轨迹采样点中的最高5点均值”和“不同访问栅格中的最高min(5,格数)格均值”；不是只改一个名字。35点常常只访问约10个不同格，低速例只有6格，重复采样会使两种Top-K不同。','',
+        'S05成功运行t=1.792s的选中轨迹mean=24.91、max=124、采样Top5=114.4，证明局部峰值能被均值显著平滑。但成功的D01 6s运行中，Top5−mean最大也约95.66；高尾差并不只出现在失败。2s关键周期选中Top5=201、低速Top5=199.8，其区分度甚至小于mean之差。','',
+        '**可提供的额外价值**是描述局部高膨胀代价与持续暴露的区别，并揭示重复栅格偏重；没有证据证明仅换聚合方式就能预测横穿、识别必须等待或提高成功率。Top-K在全0路径上仍是0，≥253仍由原硬拒绝负责。','',
+        '## 3. 历史Costmap变化是否及时、可靠？','',
+        f"**实测**：26条历史/新增地图流合计{sum(r['raw_maps'] for r in maps)}张实际带header时间戳的地图，间隔中位约0.6s，明显粗于20Hz控制和配置5Hz地图更新。全部odom格心配准，仅比较共同覆盖且两边已知的格；lethal=100单独分析，99/普通膨胀、unknown转换和rolling新覆盖分别计数。相同stamp去重、冲突/倒序/非整数位移/旋转等由测试覆盖，本批无拒绝地图。",
+        '- 静态S04/S05和动态障碍尚静止时，同样出现lethal增减与质心方向候选；激光可见面、遮挡和栅格化是明确反例，不能直接称为障碍速度。',
+        '- 为更保守比较，场景轴证据要求至少2格新增＋2格移除，质心+y位移≥1格且主导x位移；连续两对、3张地图才记持续方向。ROI与阈值是诊断约束，不是泛化动态检测器，GT不进入提取。',
+        '- linked 2s的条件safe key=4.589s前有8张保守可用地图，最后源图4.2s；首+y双图线索在2.4s，但持续+y证据到4.8s才成立。linked 4s的safe key=4.744s，首+y线索4.9s、持续5.5s，均已晚于该key。可用性还加入0.1s接收余量。',
+        '- 新D01 3/5s某些方向线索不能连续满足阈值，不表示完全没有运动信息。阈值未按碰撞结果放宽；完整增删坐标、支持时间和静止阶段误报均保留。','',
+        f"**时序局限**：6份新bag的{sum(r['exported_maps'] for r in bags)}张地图中，{sum(r['source_time_tf_covered_maps'] for r in bags)}张可在地图header时刻插值TF；4张末尾图缺TF包围样本，未外推。静态两场景83/83覆盖。旧Observer使用最新TF，因此旧obstacle_grid_pose不能当作源时刻精确投影；新bag提供源stamp TF核验，但ModelStates仍无源时间戳，真值只按约0.1s接收时钟对齐。",
+        'raw Costmap的metadata.update_time为0，header是发布时刻，均不能恢复每格激光采样/融合的完整延迟。锁内候选地图也无源stamp；内容匹配只能关联较早发布过的相同内容，不能给实际地图年龄。录包在原preflight和dispatch之后开始，S04/S05首地图前约3.1/2.2s缺失，不用于证明更早没有信息。静态原场景无GT/contact发布者，本次未改场景补造。','',
+        '![地图时序概览](outputs/figures/maps_timing_overview.png)','',
+        '## 4. D01典型失败更可能来自什么？','',
+        '**实测**：旧正式MyDWA在2/3/4/5s各3次均物理接触，6s三次成功；本次3/5s接触、6s成功与其方向一致。6s成功不能自动解释为主动避让，原timing_sweep已区分交叉区错时与避让。两轮旧linked关键周期都选0.26m/s。',
+        '**推测，按证据强弱排序**：',
+        '1. 更值得优先验证：现有规划把障碍当前位置当静态占据，缺少未来横穿与停车等待约束；跟随/速度偏好使其持续前进。4s关键周期中这两条候选轨迹代价全0而地图ROI有障碍，说明仅重聚合这两条候选当前占据代价不能提供区分；能否通过更早的闭环选择改变结局尚未验证。',
+        '2. 同时相关：地图/感知的离散更新与观测滞后可能压缩反应余量，发布流的历史方向证据有时来不及且会误报。**尚不能证明“主要是地图信息滞后”**，2Hz级发布样本不能代表5Hz内部更新，缺少每格观测时间。',
+        '3. 还需分开：1.7s恒速中心点预测、无完整footprint/遇障制动可行性检查、Nav2上层恢复及观测负载。linked 4s safe key到实接触约2.267s，长于预测时域，但机器人随后继续闭环运动，不能据此单独归因预测时长。',
+        '历史avoidability有2s/4s代表性提前制动等待后无接触通过，以及晚停后仍被撞的独立物理验证；它们没有运行Nav2 Action，不是本次新增结果，也不是每条失败轨迹的精确重放。这里只用来支持“提前安全等待可能值得研究”，不冒充新策略有效性证明。','',
+        '## 5. 下一步优先级','',
+        '1. **先定义并验证遇障安全制动/等待触发条件**：当前前进偏好和缺少动态约束的证据强于Top-K单因解释。以原D01 2–5s为困难条件、6s和D02为反例/恢复对照，检验能否在扫掠区前停住并安全恢复；不得把“停住”本身当安全。',
+        '2. **评分改动先做小范围可证伪实验**：在S04/S05比较固定权重下的峰值暴露、不同栅格与重复采样影响，再决定是否试Top-K。要求既保留静态通过能力，又能说明关键候选的评分差确实被合理改变；本诊断没有做该改动或声称收益。',
+        '3. **历史信息先做时间质量/误报验收**：保留原发布采样条件与静止阶段反例，检查源时间TF、融合时间可得性和至少3图方向线索的lead。当前粗粒度数据不足以支持直接实现在线时序风险模块。','',
+        '## 交付与复现','',
+        '- `README.md`：命令、数据定义和原始/重建字段界限。`PLAN.md`：已批准范围与执行记录。',
+        '- `outputs/score_summary.json`、`score_cycles.jsonl.gz`、`all_candidates.csv.gz`、`key_candidates.csv`、`critical_decisions.json`：全部原始评分贡献、选择标记、离线mean/max/Top-K/不同格数及核验。',
+        '- `outputs/maps_details.json`、`maps_pairs.csv`、`maps_key_availability.csv`、`maps_findings.md`：逐对格心变化、坐标、时间支持、误报及可用性。`outputs/bag_summary.json`：源stamp/TF/GT限制。',
+        '- `runs/*`：6份新bag、原始probe JSONL、原runner输出与场景/config/命令、加载库映射。旧输入留在原处，`outputs/inventory.json`与初始5252文件散列提供路径和版本证据。',
+        f"- 验证：{n_tests}项离线单元测试通过；6份sqlite bag quick_check通过；探针原返回/异常/调用次数fixture通过；{audit['protected_existing_files']}个既有文件无修改/缺失，原Git HEAD/diff/status不变。诊断输出经一致性核验，不代表DWA本体所有安全性质已验证。",'']
+    # Select the actual overview name generated by the temporal analysis.
+    figures=HERE/'outputs/figures'
+    overview=next((p.name for p in figures.glob('maps*') if 'diagnostic_t4_linked' in p.name),None)
+    if overview:
+        lines=[line.replace('maps_timing_overview.png',overview) for line in lines]
+        index=next(i for i,line in enumerate(lines) if line.startswith('![地图时序概览]'))
+        lines.insert(index+1,'图中橙线为条件safe key，绿线为首+y线索，紫线为持续+y，红线为物理接触；蓝虚线是场景命令位置，只作近似坐标背景。方向规则属于本轮探索性诊断，非预注册或已验证的通用检测器。')
+    else:
+        lines=[line for line in lines if 'maps_timing_overview.png' not in line]
+    (HERE/'REPORT.md').write_text('\n'.join(lines)+'\n')
+    print('REPORT.md written from',len(scores),'score runs,',len(maps),'map streams;',n_tests,'tests')
+
+
+if __name__=='__main__':main()

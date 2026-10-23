@@ -1,0 +1,9 @@
+run,case,valid,action_result,stop_reason,contact_relative_s,selector_checks,accelerating_escapes,runtime_mapping_verified,cleanup_returncode,plugin_sha256
+control_D01_t2,D01_t2,True,CANCELED,collision,5.9,0,0,True,0,54edf237e23192d137fb703821c88379dbd662d453571959bd15dd13697e50e5
+control_D01_t4,D01_t4,True,CANCELED,collision,7.01,0,0,True,0,54edf237e23192d137fb703821c88379dbd662d453571959bd15dd13697e50e5
+preference_D01_t2,D01_t2,True,CANCELED,collision,6.51,10,0,True,0,54fbea7ee2db06a484c7238cfcacca40e80990c2cafd3d5bd04b3089e52dcc78
+preference_D01_t4,D01_t4,True,CANCELED,collision,7.109999999999999,0,0,True,0,54fbea7ee2db06a484c7238cfcacca40e80990c2cafd3d5bd04b3089e52dcc78
+regression_D01_t4,D01_t4,True,CANCELED,collision,7.109999999999999,1,0,True,0,54fbea7ee2db06a484c7238cfcacca40e80990c2cafd3d5bd04b3089e52dcc78
+regression_D01_t6,D01_t6,True,SUCCEEDED,,,0,0,True,0,54fbea7ee2db06a484c7238cfcacca40e80990c2cafd3d5bd04b3089e52dcc78
+regression_S04,S04,True,SUCCEEDED,,,44,0,True,0,54fbea7ee2db06a484c7238cfcacca40e80990c2cafd3d5bd04b3089e52dcc78
+regression_S05,S05,True,SUCCEEDED,,,0,0,True,0,54fbea7ee2db06a484c7238cfcacca40e80990c2cafd3d5bd04b3089e52dcc78

@@ -23,3 +23,36 @@ __pycache__/
 # Editor
 .vscode/
 *.swp
+# Keep the existing static benchmark ignored; expose the new dynamic module.
+!/benchmark/
+/benchmark/*
+!/benchmark/test_dynamic.py
+!/benchmark/dynamic/
+!/benchmark/dynamic/**/*.md
+!/benchmark/dynamic/*.md
+!/benchmark/dynamic/evidence/*.log
+
+# Path Conflict V0.1 maintained tests/docs; retain original raw-run ignore rules.
+!/test/
+/test/*
+!/test/test_controller.cpp
+!/test/test_path_conflict_monitor.cpp
+!/test/test_risk_governor.cpp
+!/docs/path_conflict_v01.md
+!/docs/superpowers/plans/2026-10-22-path-conflict-v01.md
+!/benchmark/path_conflict_v01_20261022/
+/benchmark/path_conflict_v01_20261022/runs/
+/benchmark/path_conflict_v01_20261022/prepare_check/
+/benchmark/path_conflict_v01_20261022/sources_*.zip
+!/benchmark/path_conflict_v01_20261022/README.md
+
+# Scan trend implementation: maintained source/tests/docs only; raw runs stay local.
+!/test/test_scan_obstacle_tracker.cpp
+!/docs/scan_trend_v01.md
+!/benchmark/scan_trend_20261022/
+/benchmark/scan_trend_20261022/*
+!/benchmark/scan_trend_20261022/PLAN.md
+!/benchmark/scan_trend_20261022/REPORT.md
+!/benchmark/scan_trend_20261022/analyze.py
+!/benchmark/scan_trend_20261022/plot_evidence.py
+!/benchmark/scan_trend_20261022/run_round.py

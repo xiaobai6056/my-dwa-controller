@@ -187,6 +187,26 @@ std::string ControllerDiagnostics::format(
       << "] weights=[" << c.settings.weights.obstacle << "," << c.settings.weights.speed << ","
       << c.settings.weights.goal << "," << c.settings.weights.path << ","
       << c.settings.weights.heading << "]";
+  if (c.conflict_enabled) {
+    out << " path_conflict[state,map_id,fresh,known,aligned,history,inner,outer_risk]="
+        << "[" << riskStateName(c.risk.state) << "," << c.conflict.map_state_id << ","
+        << c.conflict.new_map_state << "," << c.conflict.corridor_known << ","
+        << c.conflict.path_aligned << "," << c.conflict.history_comparable << ","
+        << c.conflict.inner_conflict << "," << c.conflict.outer_risk << "]"
+        << " conflict_core[inner,outer,new]=[" << c.conflict.inner_core_cells << ","
+        << c.conflict.outer_core_cells << "," << c.conflict.new_core_cells << "]"
+        << " risk[cap,stop_distance,available,wait,cannot_stop]=["
+        << c.risk.max_linear_speed << "," << c.risk.stopping_distance << ","
+        << c.risk.available_distance << "," << c.risk.allow_wait << ","
+        << c.risk.cannot_stop << "] snapshot_ms=" << c.snapshot_ms
+        << " conflict_ms=" << c.conflict_ms
+        << " known_inner_distance=" << c.conflict.known_inner_distance;
+    if (c.risk.preferred_max_linear_speed) {
+      out << " fallback_preference[cap,valid,accelerating_escape]=["
+          << *c.risk.preferred_max_linear_speed << "," << c.preferred_valid << ","
+          << c.accelerating_escape << "]";
+    }
+  }
   return out.str();
 }
 

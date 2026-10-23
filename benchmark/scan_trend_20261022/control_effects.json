@@ -1,0 +1,23 @@
+{
+  "round1_verified_D01_t2": {
+    "min_gt_polygon_gap": 0.0,
+    "odom_before_trigger": 0.2600031217679002,
+    "odom_after_trigger": 0.2600338728423694,
+    "first_reduced_command": 5.0,
+    "source_stamp_note": "Odometry source stamps; cmd_vel and unstamped GT use receipt clock"
+  },
+  "round1_verified_D01_t4": {
+    "min_gt_polygon_gap": 0.0,
+    "odom_before_trigger": 0.2600490339256599,
+    "odom_after_trigger": 0.2600733008005627,
+    "first_reduced_command": null,
+    "source_stamp_note": "Odometry source stamps; cmd_vel and unstamped GT use receipt clock"
+  },
+  "round3_D01_t2": {
+    "min_gt_polygon_gap": 0.04513788230004345,
+    "odom_before_trigger": 0.2600612204980736,
+    "odom_after_trigger": 0.21524853725260207,
+    "first_reduced_command": 2.6000000000000005,
+    "source_stamp_note": "Odometry source stamps; cmd_vel and unstamped GT use receipt clock"
+  }
+}

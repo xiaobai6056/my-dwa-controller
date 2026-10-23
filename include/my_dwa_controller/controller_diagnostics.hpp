@@ -15,6 +15,7 @@
 #include "geometry_msgs/msg/twist.hpp"
 #include "my_dwa_controller/obstacle_evaluator.hpp"
 #include "my_dwa_controller/trajectory_scorer.hpp"
+#include "my_dwa_controller/risk_governor.hpp"
 
 namespace my_dwa_controller
 {
@@ -86,6 +87,12 @@ struct CycleDiagnostics
   bool angular_braking = false;
   const char * goal_phase = "normal";
   const char * stage = "state";
+  bool conflict_enabled = false;
+  ConflictEvidence conflict;
+  RiskDecision risk;
+  double conflict_ms = 0.0, snapshot_ms = 0.0;
+  std::size_t preferred_valid = 0;
+  bool accelerating_escape = false;
 
 private:
   Clock::time_point started_, mark_;

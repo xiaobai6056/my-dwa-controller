@@ -1,0 +1,376 @@
+<sdf version="1.6">
+  <world name="default">
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+    <include>
+      <uri>model://sun</uri>
+    </include>
+    <physics type="ode">
+      <real_time_update_rate>1000.0</real_time_update_rate>
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1</real_time_factor>
+      <ode>
+        <solver>
+          <type>quick</type>
+          <iters>150</iters>
+          <precon_iters>0</precon_iters>
+          <sor>1.400000</sor>
+          <use_dynamic_moi_rescaling>1</use_dynamic_moi_rescaling>
+        </solver>
+        <constraints>
+          <cfm>0.00001</cfm>
+          <erp>0.2</erp>
+          <contact_max_correcting_vel>2000.000000</contact_max_correcting_vel>
+          <contact_surface_layer>0.01000</contact_surface_layer>
+        </constraints>
+      </ode>
+    </physics>
+    <model name="wall_0">
+      <static>true</static>
+      <pose>2.0000000000000004 -1.1500000000000001 0.5 0 0 0</pose>
+      <link name="wall">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>7.6000000000000005 1.0 1.0</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>7.6000000000000005 1.0 1.0</size>
+            </box>
+          </geometry>
+        </visual>
+        <sensor name="contacts" type="contact">
+          <always_on>true</always_on>
+          <update_rate>100</update_rate>
+          <contact>
+            <collision>collision</collision>
+          </contact>
+          <plugin name="contact_reporter_wall_0" filename="libgazebo_ros_bumper.so">
+            <ros>
+              <namespace>/benchmark</namespace>
+              <remapping>bumper_states:=contacts</remapping>
+            </ros>
+            <frame_name>world</frame_name>
+          </plugin>
+        </sensor>
+      </link>
+    </model>
+    <model name="wall_1">
+      <static>true</static>
+      <pose>-0.5999999999999999 -0.55 0.5 0 0 0</pose>
+      <link name="wall">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>2.4000000000000004 0.20000000000000018 1.0</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>2.4000000000000004 0.20000000000000018 1.0</size>
+            </box>
+          </geometry>
+        </visual>
+        <sensor name="contacts" type="contact">
+          <always_on>true</always_on>
+          <update_rate>100</update_rate>
+          <contact>
+            <collision>collision</collision>
+          </contact>
+          <plugin name="contact_reporter_wall_1" filename="libgazebo_ros_bumper.so">
+            <ros>
+              <namespace>/benchmark</namespace>
+              <remapping>bumper_states:=contacts</remapping>
+            </ros>
+            <frame_name>world</frame_name>
+          </plugin>
+        </sensor>
+      </link>
+    </model>
+    <model name="wall_2">
+      <static>true</static>
+      <pose>2.0500000000000003 -0.55 0.5 0 0 0</pose>
+      <link name="wall">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>2.3 0.20000000000000018 1.0</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>2.3 0.20000000000000018 1.0</size>
+            </box>
+          </geometry>
+        </visual>
+        <sensor name="contacts" type="contact">
+          <always_on>true</always_on>
+          <update_rate>100</update_rate>
+          <contact>
+            <collision>collision</collision>
+          </contact>
+          <plugin name="contact_reporter_wall_2" filename="libgazebo_ros_bumper.so">
+            <ros>
+              <namespace>/benchmark</namespace>
+              <remapping>bumper_states:=contacts</remapping>
+            </ros>
+            <frame_name>world</frame_name>
+          </plugin>
+        </sensor>
+      </link>
+    </model>
+    <model name="wall_3">
+      <static>true</static>
+      <pose>4.65 -0.55 0.5 0 0 0</pose>
+      <link name="wall">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>2.3 0.20000000000000018 1.0</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>2.3 0.20000000000000018 1.0</size>
+            </box>
+          </geometry>
+        </visual>
+        <sensor name="contacts" type="contact">
+          <always_on>true</always_on>
+          <update_rate>100</update_rate>
+          <contact>
+            <collision>collision</collision>
+          </contact>
+          <plugin name="contact_reporter_wall_3" filename="libgazebo_ros_bumper.so">
+            <ros>
+              <namespace>/benchmark</namespace>
+              <remapping>bumper_states:=contacts</remapping>
+            </ros>
+            <frame_name>world</frame_name>
+          </plugin>
+        </sensor>
+      </link>
+    </model>
+    <model name="wall_4">
+      <static>true</static>
+      <pose>-1.3 0.0 0.5 0 0 0</pose>
+      <link name="wall">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>1.0 0.8999999999999999 1.0</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>1.0 0.8999999999999999 1.0</size>
+            </box>
+          </geometry>
+        </visual>
+        <sensor name="contacts" type="contact">
+          <always_on>true</always_on>
+          <update_rate>100</update_rate>
+          <contact>
+            <collision>collision</collision>
+          </contact>
+          <plugin name="contact_reporter_wall_4" filename="libgazebo_ros_bumper.so">
+            <ros>
+              <namespace>/benchmark</namespace>
+              <remapping>bumper_states:=contacts</remapping>
+            </ros>
+            <frame_name>world</frame_name>
+          </plugin>
+        </sensor>
+      </link>
+    </model>
+    <model name="wall_5">
+      <static>true</static>
+      <pose>5.300000000000001 0.0 0.5 0 0 0</pose>
+      <link name="wall">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>1.0 0.8999999999999999 1.0</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>1.0 0.8999999999999999 1.0</size>
+            </box>
+          </geometry>
+        </visual>
+        <sensor name="contacts" type="contact">
+          <always_on>true</always_on>
+          <update_rate>100</update_rate>
+          <contact>
+            <collision>collision</collision>
+          </contact>
+          <plugin name="contact_reporter_wall_5" filename="libgazebo_ros_bumper.so">
+            <ros>
+              <namespace>/benchmark</namespace>
+              <remapping>bumper_states:=contacts</remapping>
+            </ros>
+            <frame_name>world</frame_name>
+          </plugin>
+        </sensor>
+      </link>
+    </model>
+    <model name="wall_6">
+      <static>true</static>
+      <pose>4.050000000000001 1.05 0.5 0 0 0</pose>
+      <link name="wall">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>3.5 1.2000000000000002 1.0</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>3.5 1.2000000000000002 1.0</size>
+            </box>
+          </geometry>
+        </visual>
+        <sensor name="contacts" type="contact">
+          <always_on>true</always_on>
+          <update_rate>100</update_rate>
+          <contact>
+            <collision>collision</collision>
+          </contact>
+          <plugin name="contact_reporter_wall_6" filename="libgazebo_ros_bumper.so">
+            <ros>
+              <namespace>/benchmark</namespace>
+              <remapping>bumper_states:=contacts</remapping>
+            </ros>
+            <frame_name>world</frame_name>
+          </plugin>
+        </sensor>
+      </link>
+    </model>
+    <model name="wall_7">
+      <static>true</static>
+      <pose>-0.050000000000000044 1.05 0.5 0 0 0</pose>
+      <link name="wall">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>3.5 1.2000000000000002 1.0</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>3.5 1.2000000000000002 1.0</size>
+            </box>
+          </geometry>
+        </visual>
+        <sensor name="contacts" type="contact">
+          <always_on>true</always_on>
+          <update_rate>100</update_rate>
+          <contact>
+            <collision>collision</collision>
+          </contact>
+          <plugin name="contact_reporter_wall_7" filename="libgazebo_ros_bumper.so">
+            <ros>
+              <namespace>/benchmark</namespace>
+              <remapping>bumper_states:=contacts</remapping>
+            </ros>
+            <frame_name>world</frame_name>
+          </plugin>
+        </sensor>
+      </link>
+    </model>
+    <model name="wall_8">
+      <static>true</static>
+      <pose>2.0000000000000004 2.15 0.5 0 0 0</pose>
+      <link name="wall">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>7.6000000000000005 0.9999999999999993 1.0</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>7.6000000000000005 0.9999999999999993 1.0</size>
+            </box>
+          </geometry>
+        </visual>
+        <sensor name="contacts" type="contact">
+          <always_on>true</always_on>
+          <update_rate>100</update_rate>
+          <contact>
+            <collision>collision</collision>
+          </contact>
+          <plugin name="contact_reporter_wall_8" filename="libgazebo_ros_bumper.so">
+            <ros>
+              <namespace>/benchmark</namespace>
+              <remapping>bumper_states:=contacts</remapping>
+            </ros>
+            <frame_name>world</frame_name>
+          </plugin>
+        </sensor>
+      </link>
+    </model>
+    <plugin name="benchmark_state" filename="libgazebo_ros_state.so">
+      <ros>
+        <namespace>/benchmark</namespace>
+      </ros>
+      <update_rate>50</update_rate>
+    </plugin>
+    <model name="dynamic_obstacle">
+      <static>true</static>
+      <pose>2.0 1.1 0.35 0 0 0</pose>
+      <link name="body">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.4 0.8 0.7</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.4 0.8 0.7</size>
+            </box>
+          </geometry>
+        </visual>
+        <sensor name="contacts" type="contact">
+          <always_on>true</always_on>
+          <update_rate>100</update_rate>
+          <contact>
+            <collision>collision</collision>
+          </contact>
+          <plugin name="contact_reporter_dynamic_obstacle" filename="libgazebo_ros_bumper.so">
+            <ros>
+              <namespace>/benchmark</namespace>
+              <remapping>bumper_states:=contacts</remapping>
+            </ros>
+            <frame_name>world</frame_name>
+          </plugin>
+        </sensor>
+      </link>
+    </model>
+  </world>
+</sdf>

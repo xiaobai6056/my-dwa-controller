@@ -1,0 +1,4 @@
+__pycache__/
+perf_build/
+runs/
+!evidence/*.log

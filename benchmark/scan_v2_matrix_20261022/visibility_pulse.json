@@ -1,0 +1,102 @@
+[
+  {
+    "stamp": 7.201,
+    "source_elapsed": 3.6009999999999995,
+    "gt_receipt": 7.2,
+    "gt_delta": -0.0009999999999994458,
+    "robot": [
+      0.8060457948055378,
+      -0.0016957697379520165,
+      0.008845916587317839
+    ],
+    "obstacle": [
+      1.6,
+      -0.7250000000000002,
+      0.0
+    ],
+    "raw_endpoints_near_box": 35,
+    "rays_intersect_inner_box": 28,
+    "background_through_box": 0,
+    "foreground": 5
+  },
+  {
+    "stamp": 7.401,
+    "source_elapsed": 3.8009999999999997,
+    "gt_receipt": 7.4,
+    "gt_delta": -0.0009999999999994458,
+    "robot": [
+      0.8325264228244645,
+      -0.0014421803553456283,
+      0.010379404629561896
+    ],
+    "obstacle": [
+      1.6,
+      -0.675,
+      0.0
+    ],
+    "raw_endpoints_near_box": 37,
+    "rays_intersect_inner_box": 30,
+    "background_through_box": 0,
+    "foreground": 0
+  },
+  {
+    "stamp": 7.601,
+    "source_elapsed": 4.0009999999999994,
+    "gt_receipt": 7.6,
+    "gt_delta": -0.001000000000000334,
+    "robot": [
+      0.8526875093231365,
+      -0.0012126521776838995,
+      0.013378438616675491
+    ],
+    "obstacle": [
+      1.6,
+      -0.6250000000000001,
+      0.0
+    ],
+    "raw_endpoints_near_box": 0,
+    "rays_intersect_inner_box": 30,
+    "background_through_box": 30,
+    "foreground": 0
+  },
+  {
+    "stamp": 7.801,
+    "source_elapsed": 4.2010000000000005,
+    "gt_receipt": 7.8,
+    "gt_delta": -0.001000000000000334,
+    "robot": [
+      0.8678470862892558,
+      -0.0009999401957282168,
+      0.014718069913296316
+    ],
+    "obstacle": [
+      1.6,
+      -0.5750000000000002,
+      0.0
+    ],
+    "raw_endpoints_near_box": 39,
+    "rays_intersect_inner_box": 31,
+    "background_through_box": 0,
+    "foreground": 1
+  },
+  {
+    "stamp": 8.001,
+    "source_elapsed": 4.401,
+    "gt_receipt": 8.0,
+    "gt_delta": -0.0009999999999994458,
+    "robot": [
+      0.8770202912939629,
+      -0.0008402220933809348,
+      0.02659898490763338
+    ],
+    "obstacle": [
+      1.6,
+      -0.5249999999999999,
+      0.0
+    ],
+    "raw_endpoints_near_box": 41,
+    "rays_intersect_inner_box": 33,
+    "background_through_box": 0,
+    "foreground": 8
+  }
+]

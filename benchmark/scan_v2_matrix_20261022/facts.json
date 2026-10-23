@@ -1,0 +1,394 @@
+[
+  {
+    "name": "v2_t2_a_20261022_D01_t2",
+    "motion_validation": {
+      "valid": true,
+      "configured_start_s": 2.0,
+      "observed_first_gt_motion_s": 2.1,
+      "gt_start_offset_s": 0.10000000000000009,
+      "first_moving_command_s": 2.1,
+      "early_gt_motion": false,
+      "gt_outside_receipt_clock_envelope": [],
+      "wrong_motion_commands": [],
+      "gt_samples": 2684,
+      "command_samples": 538,
+      "rule": "GT |dy|>0.005m, observed start within [-0.05,+0.35]s; full GT within schedule at receipt t +/-0.2s and0.01m; x fixed. Receipt clock ~0.1s, not exact physical onset."
+    },
+    "tf_retry_increments": [],
+    "first_fallback": {
+      "line": 389,
+      "t": 7.3,
+      "state": "dwa_fallback",
+      "map": 17.0,
+      "kind": 2.0,
+      "known": 0.0,
+      "prefix": 1.218,
+      "aligned": 1.0,
+      "history": 1.0,
+      "core": "0/22",
+      "new": 12.0,
+      "inner": 1.0,
+      "outer": 0.0,
+      "region": "0.405:1.066",
+      "cap": 0.112,
+      "applied": 0.112,
+      "stop": 0.071,
+      "available": 0.071,
+      "wait": 0.0,
+      "cannot_stop": 1.0,
+      "ms": 2.043,
+      "scan": 1.0,
+      "fresh": 1.0,
+      "unresolved": 1.0,
+      "seq": 19.0,
+      "predicted": 1.0,
+      "area": 1.0,
+      "area_known": 1.0,
+      "rays_clear": 0.0,
+      "map_clear": 1.0,
+      "area_clear": 0.0,
+      "release": 0.0,
+      "log_system_stamp": 1792673319.8548088,
+      "elapsed": 3.9
+    },
+    "fallback_gt": {
+      "t": 7.3,
+      "robot": [
+        0.8792499222849615,
+        0.013248092363958434,
+        0.03812838438765593
+      ],
+      "obstacle": [
+        1.6,
+        -0.65,
+        0.0
+      ],
+      "gap_approx_m": 0.4688791474465349,
+      "vx": 0.12599435708276316,
+      "wz": -0.0002445001798881319
+    },
+    "max_abs_angular_after_linear_stop": 1.1072502982657684,
+    "minimum_gap_time": 7.6
+  },
+  {
+    "name": "v2_t2_b_20261022_D01_t2",
+    "motion_validation": {
+      "valid": true,
+      "configured_start_s": 2.0,
+      "observed_first_gt_motion_s": 2.1,
+      "gt_start_offset_s": 0.10000000000000009,
+      "first_moving_command_s": 2.1,
+      "early_gt_motion": false,
+      "gt_outside_receipt_clock_envelope": [],
+      "wrong_motion_commands": [],
+      "gt_samples": 1300,
+      "command_samples": 261,
+      "rule": "GT |dy|>0.005m, observed start within [-0.05,+0.35]s; full GT within schedule at receipt t +/-0.2s and0.01m; x fixed. Receipt clock ~0.1s, not exact physical onset."
+    },
+    "tf_retry_increments": [],
+    "first_fallback": {
+      "line": 413,
+      "t": 8.5,
+      "state": "dwa_fallback",
+      "map": 25.0,
+      "kind": 2.0,
+      "known": 0.0,
+      "prefix": 1.221,
+      "aligned": 1.0,
+      "history": 1.0,
+      "core": "5/39",
+      "new": 8.0,
+      "inner": 1.0,
+      "outer": 0.0,
+      "region": "0.271:1.082",
+      "cap": 0.0,
+      "applied": 0.0,
+      "stop": 0.0,
+      "available": -0.063,
+      "wait": 0.0,
+      "cannot_stop": 1.0,
+      "ms": 1.85,
+      "scan": 1.0,
+      "fresh": 1.0,
+      "unresolved": 1.0,
+      "seq": 24.0,
+      "predicted": 0.0,
+      "area": 1.0,
+      "area_known": 1.0,
+      "rays_clear": 0.0,
+      "map_clear": 0.0,
+      "area_clear": 0.0,
+      "release": 0.0,
+      "log_system_stamp": 1792673461.5997427,
+      "elapsed": 4.9
+    },
+    "fallback_gt": {
+      "t": 8.5,
+      "robot": [
+        0.8790913516163824,
+        -0.0007661461606634123,
+        0.06094533150895852
+      ],
+      "obstacle": [
+        1.6,
+        -0.3999999999999999,
+        0.0
+      ],
+      "gap_approx_m": 0.38473463746494113,
+      "vx": 7.889229450875116e-05,
+      "wz": -0.0002657620580621973
+    },
+    "max_abs_angular_after_linear_stop": 1.0119055863298052,
+    "minimum_gap_time": 7.5
+  },
+  {
+    "name": "v2_t4_20261022_D01_t4",
+    "motion_validation": {
+      "valid": true,
+      "configured_start_s": 4.0,
+      "observed_first_gt_motion_s": 4.1000000000000005,
+      "gt_start_offset_s": 0.10000000000000053,
+      "first_moving_command_s": 4.1000000000000005,
+      "early_gt_motion": false,
+      "gt_outside_receipt_clock_envelope": [],
+      "wrong_motion_commands": [],
+      "gt_samples": 352,
+      "command_samples": 71,
+      "rule": "GT |dy|>0.005m, observed start within [-0.05,+0.35]s; full GT within schedule at receipt t +/-0.2s and0.01m; x fixed. Receipt clock ~0.1s, not exact physical onset."
+    },
+    "tf_retry_increments": [
+      {
+        "t": 5.3,
+        "count": 1.0,
+        "age": 0.006000000000000227
+      },
+      {
+        "t": 6.7,
+        "count": 2.0,
+        "age": 0.006000000000000227
+      },
+      {
+        "t": 6.8999999999999995,
+        "count": 3.0,
+        "age": 0.005999999999998451
+      }
+    ],
+    "first_fallback": {
+      "line": 435,
+      "t": 8.0,
+      "state": "dwa_fallback",
+      "map": 25.0,
+      "kind": 2.0,
+      "known": 0.0,
+      "prefix": 1.209,
+      "aligned": 1.0,
+      "history": 1.0,
+      "core": "0/0",
+      "new": 0.0,
+      "inner": 1.0,
+      "outer": 0.0,
+      "region": "0.107:0.726",
+      "cap": 0.26,
+      "applied": 0.26,
+      "stop": 0.204,
+      "available": -0.227,
+      "wait": 0.0,
+      "cannot_stop": 1.0,
+      "ms": 1.811,
+      "scan": 1.0,
+      "fresh": 1.0,
+      "unresolved": 1.0,
+      "seq": 24.0,
+      "predicted": 1.0,
+      "area": 1.0,
+      "area_known": 1.0,
+      "rays_clear": 0.0,
+      "map_clear": 1.0,
+      "area_clear": 0.0,
+      "release": 0.0,
+      "log_system_stamp": 1792673625.9767318,
+      "elapsed": 4.7
+    },
+    "fallback_gt": {
+      "t": 8.0,
+      "robot": [
+        1.1596090264424022,
+        0.0156554393466786,
+        0.047071446240644285
+      ],
+      "obstacle": [
+        1.6,
+        -0.95,
+        0.0
+      ],
+      "gap_approx_m": 0.5763316918894686,
+      "vx": 0.26004348973606584,
+      "wz": 0.020230734254285013
+    },
+    "max_abs_angular_after_linear_stop": null,
+    "minimum_gap_time": 7.000000000000001
+  },
+  {
+    "name": "v2_t6_20261022_D01_t6",
+    "motion_validation": {
+      "valid": true,
+      "configured_start_s": 6.0,
+      "observed_first_gt_motion_s": 6.1000000000000005,
+      "gt_start_offset_s": 0.10000000000000053,
+      "first_moving_command_s": 6.1000000000000005,
+      "early_gt_motion": false,
+      "gt_outside_receipt_clock_envelope": [],
+      "wrong_motion_commands": [],
+      "gt_samples": 757,
+      "command_samples": 152,
+      "rule": "GT |dy|>0.005m, observed start within [-0.05,+0.35]s; full GT within schedule at receipt t +/-0.2s and0.01m; x fixed. Receipt clock ~0.1s, not exact physical onset."
+    },
+    "tf_retry_increments": [
+      {
+        "t": 0.40000000000000036,
+        "count": 1.0,
+        "age": 0.004000000000000448
+      },
+      {
+        "t": 0.6000000000000005,
+        "count": 2.0,
+        "age": 0.004000000000000448
+      },
+      {
+        "t": 0.7999999999999998,
+        "count": 3.0,
+        "age": 0.0039999999999995595
+      },
+      {
+        "t": 1.0,
+        "count": 4.0,
+        "age": 0.0039999999999995595
+      },
+      {
+        "t": 1.2000000000000002,
+        "count": 5.0,
+        "age": 0.0039999999999995595
+      },
+      {
+        "t": 1.4000000000000004,
+        "count": 6.0,
+        "age": 0.004000000000000448
+      },
+      {
+        "t": 2.0,
+        "count": 7.0,
+        "age": 0.0039999999999995595
+      },
+      {
+        "t": 2.2,
+        "count": 8.0,
+        "age": 0.0039999999999995595
+      },
+      {
+        "t": 2.4000000000000004,
+        "count": 9.0,
+        "age": 0.004000000000000448
+      },
+      {
+        "t": 2.6000000000000005,
+        "count": 10.0,
+        "age": 0.004000000000000448
+      },
+      {
+        "t": 2.8,
+        "count": 11.0,
+        "age": 0.0039999999999995595
+      },
+      {
+        "t": 3.0,
+        "count": 12.0,
+        "age": 0.0039999999999995595
+      },
+      {
+        "t": 3.6000000000000005,
+        "count": 13.0,
+        "age": 0.004000000000000448
+      },
+      {
+        "t": 3.8,
+        "count": 14.0,
+        "age": 0.0039999999999995595
+      }
+    ],
+    "first_fallback": null,
+    "fallback_gt": null,
+    "max_abs_angular_after_linear_stop": null,
+    "minimum_gap_time": 8.600000000000001
+  },
+  {
+    "name": "prior_v2_t2",
+    "motion_validation": {
+      "valid": true,
+      "configured_start_s": 2.0,
+      "observed_first_gt_motion_s": 2.1000000000000005,
+      "gt_start_offset_s": 0.10000000000000053,
+      "first_moving_command_s": 2.1000000000000005,
+      "early_gt_motion": false,
+      "gt_outside_receipt_clock_envelope": [],
+      "wrong_motion_commands": [],
+      "gt_samples": 1195,
+      "command_samples": 240,
+      "rule": "GT |dy|>0.005m, observed start within [-0.05,+0.35]s; full GT within schedule at receipt t +/-0.2s and0.01m; x fixed. Receipt clock ~0.1s, not exact physical onset."
+    },
+    "tf_retry_increments": [],
+    "first_fallback": {
+      "line": 394,
+      "t": 7.2,
+      "state": "dwa_fallback",
+      "map": 17.0,
+      "kind": 1.0,
+      "known": 0.0,
+      "prefix": 1.215,
+      "aligned": 1.0,
+      "history": 1.0,
+      "core": "0/0",
+      "new": 0.0,
+      "inner": 1.0,
+      "outer": 0.0,
+      "region": "0.520:1.154",
+      "cap": 0.23,
+      "applied": 0.23,
+      "stop": 0.186,
+      "available": 0.186,
+      "wait": 0.0,
+      "cannot_stop": 1.0,
+      "ms": 2.021,
+      "scan": 1.0,
+      "fresh": 1.0,
+      "unresolved": 1.0,
+      "seq": 15.0,
+      "predicted": 1.0,
+      "area": 1.0,
+      "area_known": 1.0,
+      "rays_clear": 0.0,
+      "map_clear": 1.0,
+      "area_clear": 0.0,
+      "release": 0.0,
+      "log_system_stamp": 1792670719.4369237,
+      "elapsed": 3.1000000000000005
+    },
+    "fallback_gt": {
+      "t": 7.2,
+      "robot": [
+        0.7361389045522777,
+        0.002634382897614251,
+        -0.00399289261527734
+      ],
+      "obstacle": [
+        1.6,
+        -0.8500000000000001,
+        0.0
+      ],
+      "gap_approx_m": 0.7005516429396683,
+      "vx": 0.2451449890885895,
+      "wz": 0.00782430633724194
+    },
+    "max_abs_angular_after_linear_stop": 1.0353741286006544,
+    "minimum_gap_time": 7.0
+  }
+]

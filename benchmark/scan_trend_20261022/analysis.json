@@ -1,0 +1,501 @@
+[
+  {
+    "run": "round1_D01_t2",
+    "plugin_sha256": "cdf08592184f08cac272fe0cc69ee3f972555ccd48c8a7a74707a5fcbe00fb0e",
+    "mapping": null,
+    "outcome": {
+      "valid": false,
+      "status": "preflight_failed",
+      "action_result": null,
+      "stop_reason": null,
+      "error": "RuntimeError('user canceled during preflight')",
+      "navigation_start_sim_s": null,
+      "navigation_end_sim_s": null
+    },
+    "cleanup": 0
+  },
+  {
+    "run": "round1_D01_t4",
+    "plugin_sha256": "cdf08592184f08cac272fe0cc69ee3f972555ccd48c8a7a74707a5fcbe00fb0e",
+    "mapping": null,
+    "outcome": {
+      "valid": false,
+      "status": "preflight_failed",
+      "action_result": null,
+      "stop_reason": null,
+      "error": "RuntimeError('user canceled during preflight')",
+      "navigation_start_sim_s": null,
+      "navigation_end_sim_s": null
+    },
+    "cleanup": 0
+  },
+  {
+    "run": "round1_verified_D01_t2",
+    "plugin_sha256": "cdf08592184f08cac272fe0cc69ee3f972555ccd48c8a7a74707a5fcbe00fb0e",
+    "mapping": true,
+    "outcome": {
+      "valid": true,
+      "status": "finished",
+      "action_result": "CANCELED",
+      "stop_reason": "collision",
+      "error": null,
+      "navigation_start_sim_s": 4.5,
+      "navigation_end_sim_s": 9.6
+    },
+    "cleanup": 0,
+    "epoch": 4.5,
+    "scan_metadata": {
+      "frames": [
+        "base_scan"
+      ],
+      "count": 49,
+      "median_period": 0.20000000000000018,
+      "time_increments": [
+        0.0
+      ],
+      "scan_times": [
+        0.0
+      ]
+    },
+    "transitions": [
+      {
+        "t": 0.0,
+        "state": "normal",
+        "line": 303,
+        "cap": 0.26,
+        "predicted": 0.0,
+        "inner": 0.0,
+        "core": "0/0",
+        "region": "inf:0.000"
+      },
+      {
+        "t": 2.5999999999999996,
+        "state": "dwa_fallback",
+        "line": 356,
+        "cap": 0.26,
+        "predicted": 1.0,
+        "inner": 1.0,
+        "core": "0/0",
+        "region": "0.151:1.662"
+      }
+    ],
+    "risk_counts": {
+      "dwa_fallback": 13,
+      "normal": 13
+    },
+    "max_tf_failures": 0.0,
+    "unresolved_statuses": 0.0,
+    "predicted_conflicts_without_costmap_inner": 13.0,
+    "first_non_normal": {
+      "t": 2.5999999999999996,
+      "state": "dwa_fallback",
+      "line": 356,
+      "cap": 0.26,
+      "predicted": 1.0,
+      "inner": 1.0,
+      "core": "0/0",
+      "region": "0.151:1.662"
+    },
+    "motion_start": 2.0,
+    "first_observed_gt_motion": 2.0999999999999996,
+    "first_contact": 5.140000000000001,
+    "actor_id": 2.0,
+    "all_moving_interval": {
+      "n": 15,
+      "stamp_interval": [
+        6.617,
+        9.417
+      ],
+      "median_vx": -0.0068200085167624104,
+      "median_vy": 0.23988969823732129,
+      "vy_range": [
+        0.03581000344815444,
+        0.2569000027768857
+      ],
+      "velocity_rmse": 0.0758330127322231,
+      "velocity_error_p90": 0.1348300745629939,
+      "correct_direction_fraction": 1.0,
+      "median_confidence": 0.90967,
+      "median_position_error": 0.03827880433126067,
+      "max_stamp_gap": 0.20000000000000107
+    },
+    "mature_confident_interval": {
+      "n": 11,
+      "stamp_interval": [
+        7.417,
+        9.417
+      ],
+      "median_vx": -0.0068200085167624104,
+      "median_vy": 0.243659999838423,
+      "vy_range": [
+        0.2337899997515533,
+        0.2569000027768857
+      ],
+      "velocity_rmse": 0.013410412152562796,
+      "velocity_error_p90": 0.01758626237218569,
+      "correct_direction_fraction": 1.0,
+      "median_confidence": 0.92644,
+      "median_position_error": 0.039048724393002734,
+      "max_stamp_gap": 0.20000000000000107
+    },
+    "latency_now_minus_stamp": [
+      0.083,
+      0.083
+    ],
+    "velocity_truth": [
+      0.0,
+      0.25
+    ]
+  },
+  {
+    "run": "round1_verified_D01_t4",
+    "plugin_sha256": "cdf08592184f08cac272fe0cc69ee3f972555ccd48c8a7a74707a5fcbe00fb0e",
+    "mapping": true,
+    "outcome": {
+      "valid": true,
+      "status": "finished",
+      "action_result": "CANCELED",
+      "stop_reason": "collision",
+      "error": null,
+      "navigation_start_sim_s": 4.1,
+      "navigation_end_sim_s": 11.2
+    },
+    "cleanup": 0,
+    "epoch": 4.1,
+    "scan_metadata": {
+      "frames": [
+        "base_scan"
+      ],
+      "count": 58,
+      "median_period": 0.20000000000000018,
+      "time_increments": [
+        0.0
+      ],
+      "scan_times": [
+        0.0
+      ]
+    },
+    "transitions": [
+      {
+        "t": 0.10000000000000053,
+        "state": "normal",
+        "line": 300,
+        "cap": 0.26,
+        "predicted": 0.0,
+        "inner": 0.0,
+        "core": "0/0",
+        "region": "inf:0.000"
+      },
+      {
+        "t": 4.6,
+        "state": "dwa_fallback",
+        "line": 427,
+        "cap": 0.26,
+        "predicted": 1.0,
+        "inner": 1.0,
+        "core": "0/0",
+        "region": "0.000:1.381"
+      }
+    ],
+    "risk_counts": {
+      "dwa_fallback": 24,
+      "normal": 27
+    },
+    "max_tf_failures": 0.0,
+    "unresolved_statuses": 10.0,
+    "predicted_conflicts_without_costmap_inner": 20.0,
+    "first_non_normal": {
+      "t": 4.6,
+      "state": "dwa_fallback",
+      "line": 427,
+      "cap": 0.26,
+      "predicted": 1.0,
+      "inner": 1.0,
+      "core": "0/0",
+      "region": "0.000:1.381"
+    },
+    "motion_start": 4.0,
+    "first_observed_gt_motion": 4.1,
+    "first_contact": 7.110000000000001,
+    "actor_id": 1.0,
+    "all_moving_interval": {
+      "n": 15,
+      "stamp_interval": [
+        8.21,
+        11.01
+      ],
+      "median_vx": 0.006479630360245899,
+      "median_vy": 0.2584500564384546,
+      "vy_range": [
+        0.02020999757710517,
+        0.5583800005114022
+      ],
+      "velocity_rmse": 0.14762139722189938,
+      "velocity_error_p90": 0.25968415191115257,
+      "correct_direction_fraction": 1.0,
+      "median_confidence": 0.88868,
+      "median_position_error": 0.2683993159454771,
+      "max_stamp_gap": 0.20000000000000107
+    },
+    "mature_confident_interval": {
+      "n": 9,
+      "stamp_interval": [
+        9.01,
+        11.01
+      ],
+      "median_vx": 0.0020298593267303756,
+      "median_vy": 0.26035000001296255,
+      "vy_range": [
+        0.24693997660061584,
+        0.5583800005114022
+      ],
+      "velocity_rmse": 0.1405129404308192,
+      "velocity_error_p90": 0.2852754893606202,
+      "correct_direction_fraction": 1.0,
+      "median_confidence": 0.91106,
+      "median_position_error": 0.2734119048392218,
+      "max_stamp_gap": 0.40000000000000036
+    },
+    "latency_now_minus_stamp": [
+      0.09,
+      0.09
+    ],
+    "velocity_truth": [
+      0.0,
+      0.25
+    ]
+  },
+  {
+    "run": "round2_S05",
+    "plugin_sha256": "af3ea574b5715eae784f8b307b4d56e29a945e8452e094c719811026df183605",
+    "mapping": true,
+    "outcome": {
+      "valid": true,
+      "status": "succeeded",
+      "action_result": "SUCCEEDED",
+      "stop_reason": null,
+      "error": null,
+      "navigation_start_sim_s": 3.5,
+      "navigation_end_sim_s": 35.3
+    },
+    "cleanup": 0,
+    "epoch": 3.5,
+    "scan_metadata": {
+      "frames": [
+        "base_scan"
+      ],
+      "count": 180,
+      "median_period": 0.1999999999999993,
+      "time_increments": [
+        0.0
+      ],
+      "scan_times": [
+        0.0
+      ]
+    },
+    "transitions": [
+      {
+        "t": 0.5,
+        "state": "normal",
+        "line": 289,
+        "cap": 0.26,
+        "predicted": 0.0,
+        "inner": 0.0,
+        "core": "0/34",
+        "region": "inf:0.000"
+      }
+    ],
+    "risk_counts": {
+      "normal": 261
+    },
+    "max_tf_failures": 0.0,
+    "unresolved_statuses": 0.0,
+    "predicted_conflicts_without_costmap_inner": 0.0,
+    "first_non_normal": null,
+    "static_confident_tracks": 0,
+    "static_moving_samples": 0,
+    "static_moving_ids": [],
+    "static_scan_conflict_samples": 0.0,
+    "static_max_confident_speed": 0
+  },
+  {
+    "run": "round3_D01_t2",
+    "plugin_sha256": "af3ea574b5715eae784f8b307b4d56e29a945e8452e094c719811026df183605",
+    "mapping": true,
+    "outcome": {
+      "valid": true,
+      "status": "finished",
+      "action_result": "CANCELED",
+      "stop_reason": "sim_timeout",
+      "error": null,
+      "navigation_start_sim_s": 3.3,
+      "navigation_end_sim_s": 93.4
+    },
+    "cleanup": 0,
+    "epoch": 3.3,
+    "scan_metadata": {
+      "frames": [
+        "base_scan"
+      ],
+      "count": 469,
+      "median_period": 0.20000000000000107,
+      "time_increments": [
+        0.0
+      ],
+      "scan_times": [
+        0.0
+      ]
+    },
+    "transitions": [
+      {
+        "t": 0.10000000000000009,
+        "state": "normal",
+        "line": 300,
+        "cap": 0.26,
+        "predicted": 0.0,
+        "inner": 0.0,
+        "core": "0/0",
+        "region": "inf:0.000"
+      },
+      {
+        "t": 2.6000000000000005,
+        "state": "braking",
+        "line": 360,
+        "cap": 0.245,
+        "predicted": 1.0,
+        "inner": 1.0,
+        "core": "0/0",
+        "region": "0.781:1.798"
+      },
+      {
+        "t": 3.1000000000000005,
+        "state": "dwa_fallback",
+        "line": 380,
+        "cap": 0.185,
+        "predicted": 1.0,
+        "inner": 1.0,
+        "core": "0/0",
+        "region": "0.467:1.956"
+      },
+      {
+        "t": 57.800000000000004,
+        "state": "wait",
+        "line": 3151,
+        "cap": 0.0,
+        "predicted": 1.0,
+        "inner": 1.0,
+        "core": "0/0",
+        "region": "0.466:0.896"
+      },
+      {
+        "t": 58.0,
+        "state": "braking",
+        "line": 3160,
+        "cap": 0.0,
+        "predicted": 0.0,
+        "inner": 0.0,
+        "core": "0/0",
+        "region": "inf:0.000"
+      },
+      {
+        "t": 61.400000000000006,
+        "state": "dwa_fallback",
+        "line": 3338,
+        "cap": 0.0,
+        "predicted": 1.0,
+        "inner": 1.0,
+        "core": "0/0",
+        "region": "0.234:1.037"
+      },
+      {
+        "t": 68.4,
+        "state": "wait",
+        "line": 3706,
+        "cap": 0.0,
+        "predicted": 1.0,
+        "inner": 1.0,
+        "core": "0/0",
+        "region": "0.352:0.933"
+      },
+      {
+        "t": 68.5,
+        "state": "dwa_fallback",
+        "line": 3713,
+        "cap": 0.0,
+        "predicted": 1.0,
+        "inner": 1.0,
+        "core": "0/0",
+        "region": "0.328:0.983"
+      }
+    ],
+    "risk_counts": {
+      "braking": 32,
+      "dwa_fallback": 742,
+      "normal": 24,
+      "wait": 2
+    },
+    "max_tf_failures": 0.0,
+    "unresolved_statuses": 398.0,
+    "predicted_conflicts_without_costmap_inner": 45.0,
+    "first_non_normal": {
+      "t": 2.6000000000000005,
+      "state": "braking",
+      "line": 360,
+      "cap": 0.245,
+      "predicted": 1.0,
+      "inner": 1.0,
+      "core": "0/0",
+      "region": "0.781:1.798"
+    },
+    "motion_start": 2.0,
+    "first_observed_gt_motion": 2.1000000000000005,
+    "first_contact": null,
+    "actor_id": 1.0,
+    "all_moving_interval": {
+      "n": 44,
+      "stamp_interval": [
+        5.42,
+        14.02
+      ],
+      "median_vx": 0.0011843179014522573,
+      "median_vy": 0.23864999700071446,
+      "vy_range": [
+        0.02590000380462441,
+        0.2666699998901439
+      ],
+      "velocity_rmse": 0.1223059825043701,
+      "velocity_error_p90": 0.24450646790432454,
+      "correct_direction_fraction": 1.0,
+      "median_confidence": 0.86591,
+      "median_position_error": 0.04508534426199465,
+      "max_stamp_gap": 0.20000000000000107
+    },
+    "mature_confident_interval": {
+      "n": 37,
+      "stamp_interval": [
+        6.22,
+        14.02
+      ],
+      "median_vx": 0.0011986187434304223,
+      "median_vy": 0.24069007892607103,
+      "vy_range": [
+        0.17451999983989258,
+        0.2666699998901439
+      ],
+      "velocity_rmse": 0.1084478753434348,
+      "velocity_error_p90": 0.21020666338391164,
+      "correct_direction_fraction": 1.0,
+      "median_confidence": 0.8751,
+      "median_position_error": 0.04689496768316007,
+      "max_stamp_gap": 0.40000000000000036
+    },
+    "latency_now_minus_stamp": [
+      0.079,
+      0.18
+    ],
+    "velocity_truth": [
+      0.0,
+      0.25
+    ]
+  }
+]

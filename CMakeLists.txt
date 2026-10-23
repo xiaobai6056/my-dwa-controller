@@ -17,6 +17,7 @@ find_package(tf2_ros REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 
 
 # 轨迹预测独立库；启用 PIC，便于后续链接到 Controller 共享插件。
@@ -128,6 +129,32 @@ install(TARGETS path_handler
 ament_export_targets(export_path_handler HAS_LIBRARY_TARGET)
 ament_export_dependencies(nav_msgs tf2 tf2_ros tf2_geometry_msgs rclcpp)
 
+# Optional scan perception; uses the Controller's shared TF buffer.
+add_library(scan_obstacle_tracker STATIC src/scan_obstacle_tracker.cpp)
+set_target_properties(scan_obstacle_tracker PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_compile_features(scan_obstacle_tracker PUBLIC cxx_std_17)
+target_include_directories(scan_obstacle_tracker PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+ament_target_dependencies(scan_obstacle_tracker
+  sensor_msgs rclcpp_lifecycle tf2_ros tf2_geometry_msgs)
+install(TARGETS scan_obstacle_tracker EXPORT export_scan_obstacle_tracker ARCHIVE DESTINATION lib)
+ament_export_targets(export_scan_obstacle_tracker HAS_LIBRARY_TARGET)
+ament_export_dependencies(sensor_msgs rclcpp_lifecycle)
+
+# Path evidence and transient risk policy; neither owns ROS/node state.
+add_library(path_conflict STATIC src/path_conflict_monitor.cpp src/risk_governor.cpp)
+set_target_properties(path_conflict PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_compile_features(path_conflict PUBLIC cxx_std_17)
+target_link_libraries(path_conflict path_geometry scan_obstacle_tracker)
+ament_target_dependencies(path_conflict nav2_costmap_2d)
+target_include_directories(path_conflict PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+install(TARGETS path_conflict EXPORT export_path_conflict ARCHIVE DESTINATION lib)
+ament_export_targets(export_path_conflict HAS_LIBRARY_TARGET)
+
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
@@ -154,6 +181,17 @@ if(BUILD_TESTING)
 
   ament_add_gtest(test_path_handler test/test_path_handler.cpp)
   target_link_libraries(test_path_handler path_handler)
+
+  add_executable(replay_scan_emergency benchmark/scan_emergency_20261022/replay.cpp)
+  target_link_libraries(replay_scan_emergency path_conflict scan_obstacle_tracker)
+
+  ament_add_gtest(test_scan_obstacle_tracker test/test_scan_obstacle_tracker.cpp)
+  target_link_libraries(test_scan_obstacle_tracker scan_obstacle_tracker)
+
+  ament_add_gtest(test_path_conflict_monitor test/test_path_conflict_monitor.cpp)
+  target_link_libraries(test_path_conflict_monitor path_conflict)
+  ament_add_gtest(test_risk_governor test/test_risk_governor.cpp)
+  target_link_libraries(test_risk_governor path_conflict)
 
   # 使用 cppcheck 的 GTest 宏模型注册全包静态检查。
   # 仅替换自动注册，检查文件范围不变，避免重复执行同一项检查。
@@ -201,7 +239,7 @@ ament_target_dependencies(${PROJECT_NAME}
   tf2_geometry_msgs
 )
 target_link_libraries(${PROJECT_NAME}
-  velocity_sampler trajectory_predictor obstacle_evaluator trajectory_scorer path_handler
+  velocity_sampler trajectory_predictor obstacle_evaluator trajectory_scorer path_handler path_conflict
 )
 
 install(TARGETS ${PROJECT_NAME}
@@ -227,6 +265,7 @@ if(BUILD_TESTING)
     src/controller_diagnostics.cpp)
   target_compile_features(test_controller_diagnostics PRIVATE cxx_std_17)
   target_include_directories(test_controller_diagnostics PRIVATE include)
+  target_link_libraries(test_controller_diagnostics path_conflict)
   ament_target_dependencies(test_controller_diagnostics rclcpp nav2_costmap_2d geometry_msgs)
 endif()
 

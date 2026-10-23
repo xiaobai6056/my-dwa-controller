@@ -1,0 +1,8 @@
+run,valid,action_result,termination,duration_s,contact_relative_s,contact_recording_present,plugin_sha256,runtime_mapping_verified,cleanup_returncode,observation_log_records,module_ms_median,module_ms_p95,module_ms_max,first_normal_s,first_limited_s,first_braking_s,first_wait_s,first_recovering_s,first_dwa_fallback_s
+prefix_fix_D01_t2,True,CANCELED,collision,6.0,6.08,True,9aecefa4178f7da1c4f43f4cfd053f703d614028488d1b296f1ef799125eb1c8,True,0,31,1.157,1.577,1.649,0.0,,4.6,,,4.799999999999999
+prefix_fix_D01_t4,True,CANCELED,collision,6.8999999999999995,6.909999999999999,True,9aecefa4178f7da1c4f43f4cfd053f703d614028488d1b296f1ef799125eb1c8,True,0,33,1.157,1.353,1.695,0.0,5.499999999999999,,,,6.7
+smoke_D01_t2,True,CANCELED,collision,5.2,5.22,True,b5076d6471afa5f68ce28c570185cabb0f542e7f12d4096395de14dc10899e61,True,0,27,1.174,1.477,1.714,0.10000000000000009,,,,,4.8
+smoke_D01_t4,True,CANCELED,collision,6.8,6.81,True,b5076d6471afa5f68ce28c570185cabb0f542e7f12d4096395de14dc10899e61,True,0,35,1.189,1.515,1.564,0.0,,,,,
+smoke_D01_t6,True,SUCCEEDED,finished,15.3,,True,b5076d6471afa5f68ce28c570185cabb0f542e7f12d4096395de14dc10899e61,True,0,68,1.131,1.389,1.626,0.09999999999999964,,,,,
+smoke_S04,True,SUCCEEDED,succeeded,20.9,,False,b5076d6471afa5f68ce28c570185cabb0f542e7f12d4096395de14dc10899e61,True,0,88,1.194,1.611,1.789,0.6000000000000005,,,,,
+smoke_S05,True,SUCCEEDED,succeeded,31.599999999999998,,False,b5076d6471afa5f68ce28c570185cabb0f542e7f12d4096395de14dc10899e61,True,0,155,1.175,1.555,1.763,0.5999999999999996,,,,,

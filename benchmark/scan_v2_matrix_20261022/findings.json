@@ -1,0 +1,161 @@
+[
+  {
+    "comparison": {
+      "name": "v2_t2_a_20261022_D01_t2",
+      "same_plugin": true,
+      "same_source": true,
+      "same_parameter_file": true,
+      "same_runtime_parameters": true,
+      "same_scene": true,
+      "metric": "all runs including prior V2 recomputed by the same analyzer"
+    },
+    "clear_confirmation_sequences": [
+      [
+        10.2,
+        50.0
+      ],
+      [
+        10.299999999999999,
+        51.0
+      ],
+      [
+        10.4,
+        51.0
+      ],
+      [
+        10.5,
+        52.0
+      ],
+      [
+        10.6,
+        52.0
+      ],
+      [
+        10.7,
+        53.0
+      ]
+    ],
+    "first_wait_to_fallback": null
+  },
+  {
+    "comparison": {
+      "name": "v2_t2_b_20261022_D01_t2",
+      "same_plugin": true,
+      "same_source": true,
+      "same_parameter_file": true,
+      "same_runtime_parameters": true,
+      "same_scene": true,
+      "metric": "all runs including prior V2 recomputed by the same analyzer"
+    },
+    "clear_confirmation_sequences": [
+      [
+        9.700000000000001,
+        48.0
+      ],
+      [
+        9.9,
+        49.0
+      ],
+      [
+        10.1,
+        50.0
+      ]
+    ],
+    "first_wait_to_fallback": {
+      "line": 413,
+      "t": 8.5,
+      "state": "dwa_fallback",
+      "map": 25.0,
+      "kind": 2.0,
+      "known": 0.0,
+      "prefix": 1.221,
+      "aligned": 1.0,
+      "history": 1.0,
+      "core": "5/39",
+      "new": 8.0,
+      "inner": 1.0,
+      "outer": 0.0,
+      "region": "0.271:1.082",
+      "cap": 0.0,
+      "applied": 0.0,
+      "stop": 0.0,
+      "available": -0.063,
+      "wait": 0.0,
+      "cannot_stop": 1.0,
+      "ms": 1.85,
+      "scan": 1.0,
+      "fresh": 1.0,
+      "unresolved": 1.0,
+      "seq": 24.0,
+      "predicted": 0.0,
+      "area": 1.0,
+      "area_known": 1.0,
+      "rays_clear": 0.0,
+      "map_clear": 0.0,
+      "area_clear": 0.0,
+      "release": 0.0,
+      "log_system_stamp": 1792673461.5997427,
+      "elapsed": 4.9
+    }
+  },
+  {
+    "comparison": {
+      "name": "v2_t4_20261022_D01_t4",
+      "same_plugin": true,
+      "same_source": true,
+      "same_parameter_file": true,
+      "same_runtime_parameters": true,
+      "same_scene": false,
+      "metric": "all runs including prior V2 recomputed by the same analyzer"
+    },
+    "clear_confirmation_sequences": [],
+    "first_wait_to_fallback": null
+  },
+  {
+    "comparison": {
+      "name": "v2_t6_20261022_D01_t6",
+      "same_plugin": true,
+      "same_source": true,
+      "same_parameter_file": true,
+      "same_runtime_parameters": true,
+      "same_scene": false,
+      "metric": "all runs including prior V2 recomputed by the same analyzer"
+    },
+    "clear_confirmation_sequences": [],
+    "first_wait_to_fallback": null
+  },
+  {
+    "comparison": {
+      "name": "prior_v2_t2",
+      "same_plugin": true,
+      "same_source": true,
+      "same_parameter_file": true,
+      "same_runtime_parameters": true,
+      "same_scene": true,
+      "metric": "all runs including prior V2 recomputed by the same analyzer"
+    },
+    "clear_confirmation_sequences": [
+      [
+        11.0,
+        44.0
+      ],
+      [
+        11.1,
+        44.0
+      ],
+      [
+        11.200000000000001,
+        45.0
+      ],
+      [
+        11.3,
+        45.0
+      ],
+      [
+        11.4,
+        46.0
+      ]
+    ],
+    "first_wait_to_fallback": null
+  }
+]
