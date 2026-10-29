@@ -1,0 +1,28 @@
+{
+  "extra_clearance": 0.1,
+  "forward_beyond_exit": 0.1,
+  "freshness_ns": 350000000,
+  "required_scans": 4,
+  "candidate_support": "admitted original DWA candidate reduces target heading error or moves rearward; zero command does not count",
+  "certificate": "two axis-aligned-in-frozen-basis segments, diagnostic connectivity only; never supplied to DWA",
+  "weights": {
+    "heading": 0.05,
+    "path": 0.2,
+    "goal": 0.6,
+    "speed": 0.1,
+    "obstacle": 0.1
+  },
+  "end_time": 16.0,
+  "start": 4.0,
+  "observation": "5Hz complete scene envelope and exact current-pose 360-beam rays; not real Scan/Tracker evidence",
+  "initial_stop_latch": true,
+  "crossing_yield_release": "unchanged original code with synthetic current rays, no scripted release time",
+  "heading": "atan2(locked_target.y-current_robot.y,locked_target.x-current_robot.x), compare to nominal endpoint yaw / pi",
+  "screening": {
+    "rearward_displacement_before_88": 0.05,
+    "sustained_seconds": 0.2,
+    "pass_gain_seconds": 0.2
+  },
+  "selected_stop_aborts_permission": true,
+  "selected_stop_note": "conservative: a selected zero action re-latches even if another nonzero candidate might exist"
+}

@@ -24,3 +24,16 @@ target_link_libraries(audit_selected rolling_model my_dwa_controller::motion_pre
 add_executable(test_strategy test_strategy.cpp)
 target_link_libraries(test_strategy my_dwa_controller::trajectory_scorer GTest::gtest_main)
 add_test(NAME strategy_weights COMMAND test_strategy)
+
+find_library(CONTROLLER_LIBRARY NAMES my_dwa_controller
+  PATHS "${my_dwa_controller_DIR}/../../../lib" REQUIRED NO_DEFAULT_PATH)
+add_library(reference_model reference.cpp)
+target_link_libraries(reference_model rolling_model ${CONTROLLER_LIBRARY} my_dwa_controller::trajectory_scorer)
+add_executable(test_reference test_reference.cpp)
+target_link_libraries(test_reference reference_model GTest::gtest_main)
+add_test(NAME reference_lifecycle COMMAND test_reference)
+
+target_link_libraries(rolling reference_model)
+
+add_executable(audit_reference audit_reference.cpp)
+target_link_libraries(audit_reference reference_model my_dwa_controller::motion_predictor my_dwa_controller::velocity_sampler my_dwa_controller::trajectory_scorer my_dwa_controller::obstacle_evaluator my_dwa_controller::dynamic_trajectory_evaluator nlohmann_json::nlohmann_json)
