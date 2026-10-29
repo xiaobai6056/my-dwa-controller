@@ -53,6 +53,12 @@ int main(int argc,char ** argv)
   const std::string scheme=argv[3];const auto weights=strategy("A");
   if (scheme!="A" && scheme!="B") {return 2;}
   Json input;std::ifstream(argv[1])>>input;
+  const auto reference_parameters=input.value("reference_parameters",Json::object());
+  const double heading_multiplier=reference_parameters.value("heading_multiplier",1.);
+  const double extra_clearance=reference_parameters.value("extra_clearance",.10);
+  const double forward_offset=reference_parameters.value("forward_offset",.10);
+  if (!std::isfinite(heading_multiplier) || heading_multiplier<=0 || !std::isfinite(extra_clearance) ||
+      extra_clearance<.10 || !std::isfinite(forward_offset) || forward_offset<.10) {return 2;}
   if (input["scene"]["keyframes"]!=Json::array({Json::array({0,1.6,-1.1}),
       Json::array({2.0,1.6,-1.1}),Json::array({10.8,1.6,1.1})}) ||
       input["scene"]["size"]!=Json::array({.5,.5,.7})) {
@@ -91,6 +97,7 @@ int main(int argc,char ** argv)
       const auto risk_observation=yield.update(&scan,local,plant.pose,plant.velocity,
         fallback.trajectory,sourceNs(t),false);
       if (risk_observation.triggered) {yield.latchHold(true);guide=ReferenceGuide{};}
+      guide.extra_clearance=extra_clearance;guide.forward_offset=forward_offset;
       if (scheme=="B") {guide.observe(&scan,z,plant.pose,walls,sourceNs(t));}
       const auto commands=sampleVelocities(plant.velocity,config);
       struct Candidate {MotionRollout nominal,backup;double cost;};
@@ -140,8 +147,9 @@ int main(int argc,char ** argv)
         ordinary_position=i;break;
       }
       const auto reference_point=guide.phase==ReferencePhase::Locked?guide.target:guide.proposal;
-      if (scheme=="B" && guide.valid && reference_point && guide.phase!=ReferencePhase::Done) {
-        for (auto & r:ranked) {r.score=referenceScore(r.score,candidates[r.index].nominal.trajectory,plant.pose,*reference_point);}
+      bool selected_guided=scheme=="B" && guide.valid && reference_point && guide.phase!=ReferencePhase::Done;
+      if (selected_guided) {
+        for (auto & r:ranked) {r.score=referenceScore(r.score,candidates[r.index].nominal.trajectory,plant.pose,*reference_point,heading_multiplier);}
         std::stable_sort(ranked.begin(),ranked.end(),[&](const Ranked & a,const Ranked & b){
           if (a.score.total_cost!=b.score.total_cost) {return a.score.total_cost<b.score.total_cost;}
           return std::abs(candidates[a.index].nominal.trajectory.command.omega)<std::abs(candidates[b.index].nominal.trajectory.command.omega);
@@ -191,6 +199,7 @@ int main(int argc,char ** argv)
       const bool permission=scheme=="B" && guide.approve(stopped,bypassActionAdmitted(selected_rank,selected),useful,fallback_ok);
       const bool risk_hold=yield.latchHold(risk.hold);
       if (scheme=="A" || guide.phase==ReferencePhase::Done) {
+        selected_guided=false;
         ranked=ordinary_ranked;selected_rank=ordinary_position;
         if (ordinary_admitted) {
           const auto & tr=candidates[ordinary_ranked[ordinary_position].index].nominal.trajectory;
@@ -208,9 +217,10 @@ int main(int argc,char ** argv)
         bool reaches=false;for (const auto & q:tr.poses) {if (q.x>=z.lo && q.x<=z.hi && q.y<z.rear) {reaches=true;break;}}
         selected_rear=reaches && !hold_output;
       }
+      const double effective_heading_weight=weights.heading*(selected_guided?heading_multiplier:1.);
       Json weighted=nullptr;
       if (!selected_score.is_null()) {
-        weighted={{"heading",weights.heading*selected_score["heading"].get<double>()},
+        weighted={{"heading",effective_heading_weight*selected_score["heading"].get<double>()},
           {"path",weights.path*selected_score["path"].get<double>()},{"goal",weights.goal*selected_score["goal"].get<double>()},
           {"speed",weights.speed*selected_score["speed"].get<double>()},{"obstacle",weights.obstacle*selected_score["obstacle"].get<double>()}};
       }
@@ -219,7 +229,9 @@ int main(int argc,char ** argv)
         {"votes",guide.votes},{"lock_stamp",guide.lock_stamp},{"valid",guide.valid},
         {"permission",permission},{"aborted",guide.aborted},{"released",guide.released},
         {"desired_yaw",reference_point?Json(guide.desiredYaw(plant.pose)):Json(nullptr)}};
-      Json state={{"reference",ref_state},{"proposed_candidate",{proposed_command.v,proposed_command.omega}},
+      Json state={{"reference_parameters",{{"heading_multiplier",heading_multiplier},{"extra_clearance",extra_clearance},{"forward_offset",forward_offset}}},
+        {"guided_scoring",selected_guided},{"effective_heading_weight",effective_heading_weight},{"score_is_held_proposal",hold_output},
+        {"reference",ref_state},{"proposed_candidate",{proposed_command.v,proposed_command.omega}},
         {"command_held",hold_output},{"ordinary_admitted",ordinary_admitted},{"ordinary_recovers_path",recovers_path},
         {"risk",{{"pending",risk.hold},{"hold",risk_hold},{"released",risk.released},{"triggered",risk.triggered},
           {"occupied",risk.occupied},{"clear",risk.clear},{"clear_scans",risk.clear_scans},{"entry",risk.entry},{"exit",risk.exit}}},

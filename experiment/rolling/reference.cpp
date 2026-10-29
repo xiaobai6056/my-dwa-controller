@@ -16,14 +16,14 @@ void ReferenceGuide::observe(const ScanSnapshot * s,const Exclusion & z,const Po
   fresh=true;last_stamp=stamp;if (side==0) {side=int(z.sign);}
   if (phase!=ReferencePhase::Waiting) {return;}
   proposal.reset();
-  const double s_target=z.hi+.10,q_target=z.rear-.10;
+  const double s_target=z.hi+forward_offset,q_target=z.rear-extra_clearance;
   const auto world=[&](double a,double b){return point(a*z.tx-b*z.sign*z.ty,a*z.ty+b*z.sign*z.tx);};
   const auto target_point=world(s_target,q_target),corner=world(z.along(robot),q_target);
   Trajectory certificate{{0,0},{robot,corner,target_point}};
   if (!std::isfinite(target_point.x) || !std::isfinite(target_point.y) || !z.clear(certificate,0)) {votes=0;return;}
   // A connectivity certificate, not a path supplied to the sampler or scorer.
   for (const auto & b:walls) {
-    if (segmentDistance(robot,corner,b)<.37-1e-10 || segmentDistance(corner,target_point,b)<.37-1e-10) {votes=0;return;}
+    if (segmentDistance(robot,corner,b)<.27+extra_clearance-1e-10 || segmentDistance(corner,target_point,b)<.27+extra_clearance-1e-10) {votes=0;return;}
   }
   proposal=target_point;
 }
@@ -55,14 +55,14 @@ double ReferenceGuide::desiredYaw(const Pose2D & p) const
   const auto ref=phase==ReferencePhase::Locked?target:proposal;
   return ref?std::atan2(ref->y-p.y,ref->x-p.x):p.theta;
 }
-ScoreResult referenceScore(const ScoreResult & original,const Trajectory & t,const Pose2D & p,const Pose2D & target)
+ScoreResult referenceScore(const ScoreResult & original,const Trajectory & t,const Pose2D & p,const Pose2D & target,double heading_multiplier)
 {
   auto s=original;const double desired=std::atan2(target.y-p.y,target.x-p.x),pi=std::acos(-1.);
   s.heading_cost=std::abs(std::remainder(desired-t.poses.back().theta,2*pi))/pi;
   const ScoreWeights w;
   s.total_cost=static_cast<double>(static_cast<long double>(w.obstacle)*s.obstacle_cost+
       static_cast<long double>(w.speed)*s.speed_cost+static_cast<long double>(w.goal)*s.goal_cost+
-      static_cast<long double>(w.path)*s.path_cost+static_cast<long double>(w.heading)*s.heading_cost);
+      static_cast<long double>(w.path)*s.path_cost+static_cast<long double>(w.heading)*heading_multiplier*s.heading_cost);
   return s;
 }
 void fillCurrentRays(ScanSnapshot & s,const Pose2D & p,const std::vector<Box> & boxes)

@@ -1,0 +1,22 @@
+{
+  "heading_multipliers": [1, 10, 20, 40],
+  "paired_extra_and_forward_margins_m": [0.1, 0.2, 0.3],
+  "ordinary_weights": {"H": 0.05, "P": 0.2, "G": 0.6, "V": 0.1, "O": 0.1},
+  "primary_start_s": 4,
+  "common_end_s": 16,
+  "stop_sweep_if": {"contact": true, "exclusion_violation": true, "fallback_loss": true, "stop_count_at_least": 3, "active_permission_aborts_at_least": 3, "command_reversals_above_deadband_005_greater_than": 8},
+  "confirmation_eligibility": {
+    "safety_failure": false,
+    "abnormal_chatter": false,
+    "first_sustained_005m_rear_shift_at_or_before": 8.6,
+    "max_rearward_strictly_before_8_8_at_least_m": 0.05,
+    "rear_entry_strictly_before_s": 8.8,
+    "pass_gain_vs_parking_A_at_least_s": 0.2,
+    "pass_gain_vs_original_reference_B_at_least_s": 0.2,
+    "stop_count_at_most": 1,
+    "command_reversals_at_most": 4
+  },
+  "selection": "lowest Heading multiplier among eligible; then highest minimum clearance; no further grid expansion",
+  "conditional_confirmation_starts_s": [6, 8],
+  "meaning": "Stronger guidance must improve actual early rear motion and actual passage, not merely first movement. Paired margins modify point construction only."
+}
