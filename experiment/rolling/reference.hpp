@@ -5,6 +5,15 @@
 enum class ReferencePhase {Waiting,Locked,Done};
 struct ReferenceGuide
 {
+  bool polyline=false;
+  std::optional<Pose2D> proposal_entry,entry,anchor,proposal_anchor;
+  std::vector<Pose2D> line() const {
+    if (!polyline || !valid || phase==ReferencePhase::Done) {return {};}
+    const auto a=phase==ReferencePhase::Locked?anchor:proposal_anchor;
+    const auto b=phase==ReferencePhase::Locked?entry:proposal_entry;
+    const auto c=phase==ReferencePhase::Locked?target:proposal;
+    return a && b && c?std::vector<Pose2D>{*a,*b,*c}:std::vector<Pose2D>{};
+  }
   double extra_clearance=.10,forward_offset=.10;
   ReferencePhase phase=ReferencePhase::Waiting;
   std::optional<Pose2D> proposal,target;
@@ -13,7 +22,7 @@ struct ReferenceGuide
   bool fresh=false,valid=false,aborted=false,released=false;
   void observe(const ScanSnapshot *,const Exclusion &,const Pose2D &,const std::vector<Box> &,int64_t);
   bool approve(bool stopped,bool admitted,bool useful,bool fallback_safe);
-  bool complete(const Pose2D &,const Exclusion &,bool ordinary_admitted,bool recovers_path);
+  bool complete(const Pose2D &,const Exclusion &,bool ordinary_admitted,bool recovers_path,bool reliably_clear=false);
   void abort();
   void riskReleasedWhileWaiting();
   double desiredYaw(const Pose2D &) const;

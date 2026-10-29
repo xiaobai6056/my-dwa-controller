@@ -41,3 +41,10 @@ target_link_libraries(audit_reference reference_model my_dwa_controller::motion_
 add_executable(test_reference_tuning test_reference_tuning.cpp)
 target_link_libraries(test_reference_tuning reference_model GTest::gtest_main)
 add_test(NAME reference_tuning COMMAND test_reference_tuning)
+
+add_executable(test_polyline test_polyline.cpp)
+target_link_libraries(test_polyline reference_model GTest::gtest_main)
+add_test(NAME polyline COMMAND test_polyline)
+
+add_executable(failure_check failure_check.cpp)
+target_link_libraries(failure_check reference_model my_dwa_controller::motion_predictor my_dwa_controller::velocity_sampler my_dwa_controller::trajectory_scorer my_dwa_controller::obstacle_evaluator my_dwa_controller::dynamic_trajectory_evaluator nlohmann_json::nlohmann_json)

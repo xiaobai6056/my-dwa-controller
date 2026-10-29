@@ -1,4 +1,5 @@
 #include "reference.hpp"
+#include "my_dwa_controller/path_geometry.hpp"
 bool bypassActionAdmitted(int selected_rank,const Velocity2D & command)
 {return selected_rank>=0 && (command.v!=0 || command.omega!=0);}
 void ReferenceGuide::observe(const ScanSnapshot * s,const Exclusion & z,const Pose2D & robot,
@@ -15,17 +16,17 @@ void ReferenceGuide::observe(const ScanSnapshot * s,const Exclusion & z,const Po
   }
   fresh=true;last_stamp=stamp;if (side==0) {side=int(z.sign);}
   if (phase!=ReferencePhase::Waiting) {return;}
-  proposal.reset();
+  proposal.reset();proposal_entry.reset();proposal_anchor.reset();
   const double s_target=z.hi+forward_offset,q_target=z.rear-extra_clearance;
   const auto world=[&](double a,double b){return point(a*z.tx-b*z.sign*z.ty,a*z.ty+b*z.sign*z.tx);};
-  const auto target_point=world(s_target,q_target),corner=world(z.along(robot),q_target);
+  const auto target_point=world(s_target,q_target),corner=world(polyline?std::min(z.along(robot),z.lo-extra_clearance):z.along(robot),q_target);
   Trajectory certificate{{0,0},{robot,corner,target_point}};
   if (!std::isfinite(target_point.x) || !std::isfinite(target_point.y) || !z.clear(certificate,0)) {votes=0;return;}
   // A connectivity certificate, not a path supplied to the sampler or scorer.
   for (const auto & b:walls) {
     if (segmentDistance(robot,corner,b)<.27+extra_clearance-1e-10 || segmentDistance(corner,target_point,b)<.27+extra_clearance-1e-10) {votes=0;return;}
   }
-  proposal=target_point;
+  proposal=target_point;if (polyline) {proposal_entry=corner;proposal_anchor=robot;}
 }
 bool ReferenceGuide::approve(bool stopped,bool admitted,bool useful,bool fallback_safe)
 {
@@ -36,22 +37,28 @@ bool ReferenceGuide::approve(bool stopped,bool admitted,bool useful,bool fallbac
     fresh=false;
     if (!stopped || !admitted || !useful || !proposal) {votes=0;return false;}
     ++votes;
-    if (votes>=4) {target=proposal;phase=ReferencePhase::Locked;lock_stamp=last_stamp;return true;}
+    if (votes>=4) {target=proposal;entry=proposal_entry;anchor=proposal_anchor;phase=ReferencePhase::Locked;lock_stamp=last_stamp;return true;}
   }
   return false;
 }
-bool ReferenceGuide::complete(const Pose2D & p,const Exclusion & z,bool admitted,bool recovers_path)
+bool ReferenceGuide::complete(const Pose2D & p,const Exclusion & z,bool admitted,bool recovers_path,bool reliably_clear)
 {
   if (phase!=ReferencePhase::Locked || !valid || !z.valid || !admitted || !recovers_path ||
-      z.along(p)<=z.hi || z.across(p)>=z.rear) {return false;}
-  phase=ReferencePhase::Done;target.reset();proposal.reset();votes=0;released=true;return true;
+      (!(polyline && reliably_clear) && (z.along(p)<=z.hi || z.across(p)>=z.rear))) {return false;}
+  phase=ReferencePhase::Done;target.reset();proposal.reset();entry.reset();anchor.reset();proposal_entry.reset();proposal_anchor.reset();votes=0;released=true;return true;
 }
 void ReferenceGuide::abort()
-{phase=ReferencePhase::Waiting;target.reset();proposal.reset();votes=0;valid=false;fresh=false;aborted=true;}
+{phase=ReferencePhase::Waiting;target.reset();proposal.reset();entry.reset();anchor.reset();proposal_entry.reset();proposal_anchor.reset();votes=0;valid=false;fresh=false;aborted=true;}
 void ReferenceGuide::riskReleasedWhileWaiting()
 {if (phase==ReferencePhase::Waiting) {phase=ReferencePhase::Done;proposal.reset();votes=0;}}
 double ReferenceGuide::desiredYaw(const Pose2D & p) const
 {
+  if (polyline) {
+    const auto path=line();if (path.empty()) {return p.theta;}
+    const auto projection=projectOntoPath(p,path).value();const auto ahead=lookAheadOnPath(path,projection,.5).value();
+    if (ahead.distance>1e-9) {return std::atan2(ahead.point.y-p.y,ahead.point.x-p.x);}
+    return ahead.forward_heading.value_or(p.theta);
+  }
   const auto ref=phase==ReferencePhase::Locked?target:proposal;
   return ref?std::atan2(ref->y-p.y,ref->x-p.x):p.theta;
 }
