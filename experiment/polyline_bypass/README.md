@@ -11,6 +11,9 @@ bash experiment/polyline_bypass/reproduce.sh /path/to/new_external_output
 Replace both `/path/to` locations with real paths. The output directory must be
 new and outside this repository. No ROS node, Gazebo, installation or deployment
 is launched. Dependencies are listed in [the index](../INDEX.md).
+Use an installation built from this branch's matching controller sources;
+the index identifies the validated baseline. A different API-compatible
+installation is not a numerical reproducibility guarantee.
 
 This entrypoint builds the final checked-in rolling sources, runs five CTest
 executables (41 individual tests), and executes bundled A0/A1/A2 at start=4 s.

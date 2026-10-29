@@ -11,6 +11,12 @@ Prerequisites: Linux/Bash, CMake, C++17, ROS2 Humble/ament, a compatible install
 Source ROS2 and the controller installation before building. Python analysis also
 requires numpy and matplotlib. No build/install products are bundled.
 
+The controller sources on this branch match the baseline `f7b6a45e4d858cee15e0fce22a1bd9b90e0c8446`
+(original commit ID before privacy history rewriting). Reproduction was validated
+with a Release installation of that baseline and ROS2 Humble. Build matching
+headers and libraries; API compatibility or the package version alone does not
+establish numerical equivalence with a different controller revision.
+
 | Stage | Retained record | Scope |
 |---|---|---|
 | Frozen input probe | [report](../docs/experiments/simplified_bypass_20261029.md), [CMake](CMakeLists.txt) | Candidate feasibility; original bags required by export.py |
