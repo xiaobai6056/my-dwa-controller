@@ -5,23 +5,16 @@ Source: `v2-crossing-yield-reserve020`, exact candidate commit
 The candidate and old static `main` have unrelated roots. This integration uses
 one source snapshot commit on the old `main`, rather than an unrelated-history
 merge. Candidate source/configuration, plugin registration, build files and all
-maintained tests are copied byte-for-byte. Historical experiment reports,
+maintained tests were copied byte-for-byte at the initial integration. Historical experiment reports,
 compressed logs, generated build/install directories and simulation data are
 excluded. Four small surface-motion fixtures are required by the unit suite.
 The optional `test/migration` replay sources remain; their historical evidence
 is available in the original experiment directories, outside this main tree.
 
-## Defaults and enabling
+## Default Nav2 configuration
 
-The checked-in YAML files are unchanged from the pre-integration formal checkout
-`c667a957eb15389ff0d0cf2bd91a518337af528c` and the candidate. `scan_tracker.enabled`
-is false, and `crossing_yield.enabled` defaults to false in the Controller.
-No launch scripts, scoring weights, motion parameters or BT files are changed.
-The earlier static main lacks the optional scan/motion YAML entries; they are
-added here exactly as already present in the formal checkout, with scanning off.
-
-To enable crossing yield explicitly in a separate user-selected ROS parameter
-file/overlay under the existing controller plugin namespace:
+The shipped `config/nav2_params.yaml` now enables Scan Tracker, DynamicFilter
+and Crossing Yield under `/controller_server`'s `FollowPath` plugin:
 
 ```yaml
 controller_server:
@@ -34,11 +27,55 @@ controller_server:
         enabled: true
 ```
 
-This is an enabling overlay, not a replacement for the complete Nav2 config.
-Use the existing `/scan` topic and TF setup, or the deployment's explicit topic.
-Turning the switches on does not reproduce the full benchmark configuration;
-its fixed motion settings and other inputs remain in the experiment snapshots.
-No switches were enabled automatically during integration.
+DynamicFilter is constructed with Scan Tracker; it has no separate enable
+parameter. Load the complete shipped Nav2 YAML, with the existing `/scan` topic
+and scan-time TF to the local costmap frame. Without usable Scan evidence the
+enabled filter returns a zero target. Topic, velocity/acceleration limits,
+scoring weights, prediction/braking parameters, progress checker and behavior
+tree settings are unchanged. Plugin callers omitting these YAML switches retain
+the existing false parameter fallbacks; this change is to the shipped Nav2
+configuration, not to the Controller implementation.
+
+To opt back into static selection, override both switches in a complete user
+configuration or parameter overlay:
+
+```yaml
+controller_server:
+  ros__parameters:
+    FollowPath:
+      scan_tracker:
+        enabled: false
+      crossing_yield:
+        enabled: false
+```
+
+The 2026-10-29 regression used source `f7b6a45` with exactly these two switches
+enabled: S01-S06 once each, with S05 repeated twice; D01/D02 three times each.
+All 14 dynamic-configuration trials reached the goal without recorded Gazebo
+contacts. Four same-source static A/B trials (S04/S05/S06/D02) also reached the
+goal without recorded contacts. One static admission attempt failed before
+goal dispatch because its check expected inactive Tracker parameters to be
+declared; it was retained and retried once after correcting only that check.
+
+D01 used the standard 4-second onset: all three trials triggered and released
+Crossing Yield, with about 6.3-6.6 seconds of physical stopping before resuming.
+D02 reached its goal in 36.3-39.1 seconds but did not trigger Crossing Yield;
+it relied on normal Nav2 recovery, with feedback recovery counts of 10-16 and
+2.1-4.0 seconds to resume after the actor physically cleared the corridor.
+The static D02 control also used recovery (38.7 seconds, count 15). These
+observations do not establish a D02 Yield release or general stability.
+S06's last post-success pose sample had about 0.254 rad yaw error versus the
+0.25 rad tolerance; arrival status does not establish steady-state tolerance.
+The default is enabled by maintainer request with these limitations retained.
+
+Raw logs, bags, exact configurations, plugin mappings/hashes and summary CSV
+remain outside Git in
+`/home/user/ros2_experiments/dynamic_regression_main_20261029`.
+The YAML-loading test covers enabled defaults and zero output without Scan;
+the original sampling/acceleration expectation remains covered with explicit
+static opt-out. No scenario definitions, thresholds or algorithms are changed.
+Rebuild and source a matching installation before running: a source or remote
+configuration update alone does not refresh an existing plugin binary.
 
 The strategy maintains crossing risk, permits approach only while a complete
 candidate-after-one-cycle brake satisfies the 0.20 m longitudinal reserve plus
@@ -61,7 +98,8 @@ contact checks also completed, but two isolated Scan returns in one frame gave
 a negative raw observed-radius clearance. Their exact origin is unresolved;
 they did not match the saved wall geometry. Do not interpret the integration or
 these single trials as all-observation-metrics clearance or a general safety
-proof. No new Gazebo trials or parameter tuning are part of this integration.
+proof. No new Gazebo trials or parameter tuning were part of the initial integration;
+the later default-configuration regression is documented above.
 Full raw evidence remains at:
 `/home/user/ros2_experiments/crossing_yield_reserve020_20261029`.
 

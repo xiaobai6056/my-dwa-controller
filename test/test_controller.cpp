@@ -311,7 +311,25 @@ TEST_F(ControllerTest, UsesControllerFrequencyAndBothCurrentVelocityComponents)
   EXPECT_LE(command.twist.angular.z, 0.6 + kTolerance);
 }
 
-TEST_F(ControllerTest, LoadsActualNav2YamlParameters)
+TEST_F(ControllerTest, ActualNav2YamlEnablesDynamicControlAndStopsWithoutScan)
+{
+  rclcpp::NodeOptions options;
+  options.arguments({"--ros-args", "--params-file", MY_DWA_TEST_PARAMS_FILE});
+  options.automatically_declare_parameters_from_overrides(true);
+  auto node = std::make_shared<rclcpp_lifecycle::LifecycleNode>("controller_server", options);
+  EXPECT_TRUE(node->get_parameter("FollowPath.scan_tracker.enabled").as_bool());
+  ASSERT_TRUE(node->has_parameter("FollowPath.crossing_yield.enabled"));
+  EXPECT_TRUE(node->get_parameter("FollowPath.crossing_yield.enabled").as_bool());
+  controller_->configure(node, "FollowPath", tf_, costmap_);
+  controller_->setPlan(straightPath());
+  controller_->activate();
+  // Enabled DynamicFilter must reject commands without a usable Scan snapshot.
+  const auto command = compute();
+  EXPECT_DOUBLE_EQ(command.twist.linear.x, 0.0);
+  EXPECT_DOUBLE_EQ(command.twist.angular.z, 0.0);
+}
+
+TEST_F(ControllerTest, LoadsActualNav2YamlParametersWithExplicitStaticOptOut)
 {
   rclcpp::NodeOptions options;
   options.arguments({"--ros-args", "--params-file", MY_DWA_TEST_PARAMS_FILE});
@@ -323,6 +341,9 @@ TEST_F(ControllerTest, LoadsActualNav2YamlParameters)
   EXPECT_DOUBLE_EQ(node->get_parameter("FollowPath.trans_stopped_velocity").as_double(), 0.02);
   EXPECT_DOUBLE_EQ(node->get_parameter("FollowPath.terminal_xy_tolerance").as_double(), 0.25);
   EXPECT_DOUBLE_EQ(node->get_parameter("FollowPath.terminal_yaw_tolerance").as_double(), 0.05);
+  // Keep the original YAML sampling/acceleration check with dynamics explicitly disabled.
+  ASSERT_TRUE(node->set_parameter({"FollowPath.scan_tracker.enabled", false}).successful);
+  ASSERT_TRUE(node->set_parameter({"FollowPath.crossing_yield.enabled", false}).successful);
   controller_->configure(node, "FollowPath", tf_, costmap_);
   controller_->setPlan(straightPath());
   controller_->activate();

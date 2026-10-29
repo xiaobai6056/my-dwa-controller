@@ -140,18 +140,19 @@ controller_server:
     # DWA: ordinary five-term scoring plus latched terminal slowing/rotation.
     FollowPath:
       plugin: "my_dwa_controller::MyDWAController"
-      # Optional scan-based candidate decisions; disabled preserves static DWA selection.
+      # Dynamic scan tracking/filtering and crossing yield are enabled by default.
       # Initial values for 5 Hz / 360-ray scans; D01 moves about 0.05 m per scan.
-      # Extra prediction preference; zero reproduces the base DWA score.
       motion.linear_acceleration: 1.0
       motion.angular_acceleration: 1.0
       motion.response_delay: 0.12
       scan_tracker:
-        enabled: false
+        enabled: true
         topic: /scan
         cluster_distance: 0.12  # Adjacent-point distance in metres.
         min_cluster_points: 3
         association_distance: 0.35  # Maximum previous-center distance in metres.
+      crossing_yield:
+        enabled: true
       max_vel_x: 0.26
       max_vel_theta: 1.0
       acc_lim_x: 2.5
