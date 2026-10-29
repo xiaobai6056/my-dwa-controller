@@ -20,3 +20,7 @@ target_link_libraries(rolling rolling_model my_dwa_controller::motion_predictor
   nlohmann_json::nlohmann_json)
 add_executable(audit_selected audit_selected.cpp)
 target_link_libraries(audit_selected rolling_model my_dwa_controller::motion_predictor nlohmann_json::nlohmann_json)
+
+add_executable(test_strategy test_strategy.cpp)
+target_link_libraries(test_strategy my_dwa_controller::trajectory_scorer GTest::gtest_main)
+add_test(NAME strategy_weights COMMAND test_strategy)

@@ -3,6 +3,7 @@
 #include <iomanip>
 #include <nlohmann/json.hpp>
 #include "rolling_model.hpp"
+#include "strategy.hpp"
 #include "my_dwa_controller/motion_predictor.hpp"
 #include "my_dwa_controller/velocity_sampler.hpp"
 #include "my_dwa_controller/trajectory_scorer.hpp"
@@ -46,7 +47,8 @@ Trajectory queuedBackup(Plant plant,Velocity2D cmd)
 }
 int main(int argc,char ** argv)
 {
-  if (argc<3) {return 2;}
+  if (argc<4) {return 2;}
+  const std::string scheme=argv[3];const auto weights=strategy(scheme);
   Json input;std::ifstream(argv[1])>>input;
   if (input["scene"]["keyframes"]!=Json::array({Json::array({0,1.6,-1.1}),
       Json::array({2.0,1.6,-1.1}),Json::array({10.8,1.6,1.1})}) ||
@@ -58,10 +60,10 @@ int main(int argc,char ** argv)
   MotionConfig mc;mc.angular_acceleration=3.2;MotionPredictor predictor(mc);
   SamplingConfig config;config.max_v=.26;config.acc_v=2.5;config.acc_w=3.2;
   config.v_samples=config.w_samples=20;
-  TrajectoryScorer scorer(.26);DynamicFilter filter(.22,1.7,.05);
+  TrajectoryScorer scorer(.26,weights);DynamicFilter filter(.22,1.7,.05);
   Json summaries=Json::array();
   std::vector<double> starts=input["start_times"].get<std::vector<double>>();
-  if (argc>3) {starts.clear();for (int i=3;i<argc;++i) {starts.push_back(std::stod(argv[i]));}}
+  if (argc>4) {starts.clear();for (int i=4;i<argc;++i) {starts.push_back(std::stod(argv[i]));}}
   for (double start:starts) {
     Plant plant;plant.pose=point(input["initial"][0],input["initial"][1]);plant.pose.theta=input["initial"][2];plant.time=start;
     std::ostringstream name;name<<std::fixed<<std::setprecision(2)<<start;
@@ -137,7 +139,19 @@ int main(int argc,char ** argv)
         selected_score={{"total",s.total_cost},{"goal",s.goal_cost},{"path",s.path_cost},{"speed",s.speed_cost},
           {"obstacle",s.obstacle_cost},{"heading",s.heading_cost}};break;
       }
-      Json state={{"t",t},{"scan_t",source_time},{"pose",{plant.pose.x,plant.pose.y,plant.pose.theta}},
+      Json selected_rear=nullptr;
+      if (selected_rank>=0) {
+        const auto & tr=candidates[ranked[selected_rank].index].nominal.trajectory;
+        bool reaches=false;for (const auto & q:tr.poses) {if (q.x>=z.lo && q.x<=z.hi && q.y<z.rear) {reaches=true;break;}}
+        selected_rear=reaches;
+      }
+      Json weighted=nullptr;
+      if (!selected_score.is_null()) {
+        weighted={{"heading",weights.heading*selected_score["heading"].get<double>()},
+          {"path",weights.path*selected_score["path"].get<double>()},{"goal",weights.goal*selected_score["goal"].get<double>()},
+          {"speed",weights.speed*selected_score["speed"].get<double>()},{"obstacle",weights.obstacle*selected_score["obstacle"].get<double>()}};
+      }
+      Json state={{"scheme",scheme},{"selected_rear_reaching",selected_rear},{"weighted_score",weighted},{"t",t},{"scan_t",source_time},{"pose",{plant.pose.x,plant.pose.y,plant.pose.theta}},
         {"measured",{plant.velocity.v,plant.velocity.omega}},{"selected",{selected.v,selected.omega}},
         {"sampled",commands.size()},{"ranked",ranked.size()},{"selected_rank",selected_rank},
         {"score",selected_score},{"rejected",rejected},{"fallback_ok",fallback_ok},
@@ -164,7 +178,7 @@ int main(int argc,char ** argv)
       if (now_moving && !moving) {motion_starts.push_back(plant.time);if (first_motion<0) {first_motion=plant.time;}}
       if (!now_moving && moving) {++stops;}moving=now_moving;
       if (entry<0 && plant.pose.x>=z.lo && plant.pose.y<z.rear) {entry=plant.time;}
-      if (entry>=0 && passed(plant.pose,z)) {pass=plant.time;failure="";break;}
+      if (pass<0 && entry>=0 && passed(plant.pose,z)) {pass=plant.time;failure="";}
     }
     Json summary={{"start",start},{"passed",pass>=0},{"first_motion",first_motion},{"rear_entry",entry},
       {"pass_time",pass},{"minimum_clearance",min_clearance},{"stops",stops},{"motion_starts",motion_starts},
