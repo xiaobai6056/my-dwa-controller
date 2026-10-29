@@ -1,30 +1,32 @@
-# Benchmark / tests
-/benchmark/
-/test/
-
-# Documents
-*.md
-
-# Python generated
-__pycache__/
-.pytest_cache/
-*.pyc
-
-# ROS2 build outputs
+# ROS2 build and runtime output
 /build/
 /install/
 /log/
-
-# Runtime results
+/logs/
+/benchmark/results/
 *.log
 *.db3
+*.db3-shm
+*.db3-wal
 *.mcap
+*.bag
 
-# Editor
+# Generated Python/editor files
+__pycache__/
+.pytest_cache/
+*.pyc
 .vscode/
 *.swp
 
-# Keep maintained C++ tests visible; generated test files stay ignored.
-!/test/
-/test/*
-!/test/*.cpp
+# Local credentials (example templates may be maintained)
+.env
+.env.*
+!.env.example
+!.env.sample
+.git-credentials
+.netrc
+id_rsa
+id_ed25519
+*.pem
+*.p12
+*.pfx

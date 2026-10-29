@@ -25,4 +25,6 @@ empty-brake diagnostic; these histories use nonempty brake trajectories.
 
 This proves structural parity for the supplied sequence, not the original ROS
 executor ordering, all control cycles, live Costmap admission, whole-controller
-scoring, or general safety. See docs/migration/REPORT.md and replay_comparison.json.
+scoring, or general safety. Original migration recordings and comparison reports
+are maintained separately; they are not included in this repository. Supply
+your own frozen inputs and ROS bag using the schema above.
