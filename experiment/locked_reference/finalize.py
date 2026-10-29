@@ -92,6 +92,7 @@ for name in ['README.md','PLAN.md','REPORT.md','setup.py','prepare.py','integrat
     shutil.copy2(root/name,archive/name)
 shutil.copy2(root/'params/design.json',archive/'design.json')
 subprocess.run(['git','-C',str(src),'add','experiment/rolling','experiment/locked_reference'],check=True)
+subprocess.run(['git','-C',str(src),'add','-f',*[str(archive/name) for name in ['README.md','PLAN.md','REPORT.md']]],check=True)
 subprocess.run(['git','-C',str(src),'commit','-m','experiment: evaluate locked reference Heading with original DWA safety gates'],check=True)
 
 ldd=subprocess.check_output(['ldd',str(root/'logs/phase1_executable')],text=True)
@@ -102,6 +103,11 @@ for line in ldd.splitlines():
     if len(parts)==2:
         path=parts[1].strip().split()[0]
         if path.startswith('/') and ('my_dwa' in path or 'baseline_install' in path):libraries[path]=digest(pathlib.Path(path))
+link=(root/'build/CMakeFiles/rolling.dir/link.txt').read_text()
+(root/'logs/final_link.txt').write_text(link)
+for token in link.split():
+    if token.startswith('/') and '/baseline_install/' in token and pathlib.Path(token).is_file():
+        libraries[token]=digest(pathlib.Path(token))
 write('version_manifest.json',{'formal_baseline':git(formal,'rev-parse','main'),'parent':git(parent,'rev-parse','HEAD'),
  'branch':git(src,'branch','--show-current'),'commit':git(src,'rev-parse','HEAD'),
  'producer_ELF_sha256':digest(root/'logs/phase1_executable'),'final_ELF_sha256':digest(root/'build/rolling'),
