@@ -9,6 +9,7 @@ import json
 import math
 import os
 from pathlib import Path
+
 import signal
 import subprocess
 import sys
@@ -16,6 +17,9 @@ import threading
 import time
 import xml.etree.ElementTree as ET
 
+
+# External workspace install/build prefixes and baseline scripts are not bundled.
+ARCHIVE_WS = Path(os.environ.get("MYDWA_WS", str(Path.home() / "ros2_ws")))
 
 PLUGINS = {'mydwa': 'my_dwa_controller::MyDWAController',
            'dwb': 'dwb_core::DWBLocalPlanner'}
@@ -525,7 +529,7 @@ def arguments():
     parser.add_argument('--controller', choices=PLUGINS, default='mydwa')
     parser.add_argument('--params-file', type=Path)
     parser.add_argument('--startup-script', type=Path,
-                        default=Path('/home/user/ros2_ws/scripts/start_headless_baseline.sh'))
+                        default=(ARCHIVE_WS / 'scripts/start_headless_baseline.sh'))
     parser.add_argument('--results-dir', type=Path,
                         default=Path(__file__).resolve().parent / 'results')
     parser.add_argument('--trial-id',

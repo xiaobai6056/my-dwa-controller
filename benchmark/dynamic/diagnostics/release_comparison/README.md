@@ -4,40 +4,40 @@
 
 ## 隔离、构建与回退
 
-原安装 `/home/user/ros2_ws/install/my_dwa_controller` 及原build保留。用户未提交的controller.cpp/controller.hpp修改原样保留；evidence/before.json、git_before.diff、original_CMakeCache.txt、original_flags.make和原.so保存开始状态。
+原安装 `${MYDWA_WS}/install/my_dwa_controller` 及原build保留。用户未提交的controller.cpp/controller.hpp修改原样保留；evidence/before.json、git_before.diff、original_CMakeCache.txt、original_flags.make和原.so保存开始状态。
 
 两个新build/install在工作区源目录之外：
 
-- `/home/user/ros2_ws/build_compile_comparison_20261020/{unoptimized,release}`
-- `/home/user/ros2_ws/install_compile_comparison_20261020/{unoptimized,release}`
+- `${MYDWA_WS}/build_compile_comparison_20261020/{unoptimized,release}`
+- `${MYDWA_WS}/install_compile_comparison_20261020/{unoptimized,release}`
 
 都是同一当前源码、编译器、BUILD_TESTING=ON；仅empty build type与Release不同。实际business compile_commands去掉 `-O3 -DNDEBUG` 后逐项完全一致（evidence/build_identity.json）。没有修改全局默认构建类型，也没有重建任何系统ROS/Nav2包。这里的unoptimized不是Debug，没有添加-g。
 
 从干净终端首次构建：
 
 ```bash
-bash /home/user/ros2_ws/src/my_dwa_controller/benchmark/dynamic/diagnostics/release_comparison/build.sh
+bash ${REPO_ROOT}/benchmark/dynamic/diagnostics/release_comparison/build.sh
 ```
 
 已有独立目录时脚本拒绝覆盖，不必重建本次已完成的构建。可只传 `release` 或 `unoptimized` 来构建尚不存在的单个条件。直接CMake安装没有colcon根local_setup，实际使用 `<prefix>/share/my_dwa_controller/local_setup.bash`。早期路径错误与测试红灯日志保留，最终记录见 *_functional_tests_final.log。
 
-无需替换原.so即可回退：退出诊断子进程后，原启动入口仍source原install；干净WSL终端source `/opt/ros/humble/setup.bash` 和 `/home/user/ros2_ws/install/setup.bash`，默认仍是原安装。Release只在本模块选定的子进程环境内生效，不改用户shell配置。所有实例已顺序结束并清理。
+无需替换原.so即可回退：退出诊断子进程后，原启动入口仍source原install；干净WSL终端source `/opt/ros/humble/setup.bash` 和 `${MYDWA_WS}/install/setup.bash`，默认仍是原安装。Release只在本模块选定的子进程环境内生效，不改用户shell配置。所有实例已顺序结束并清理。
 
 ## 六轮实际对照与重现
 
 固定D01、mydwa、Headless、domain91/Gazebo master11436、原参数与超时，原V0.2外部ELF探针原样复用，完整仿真重启。运行顺序 U1,R1,R2,U2,U3,R3；每轮结束统一3秒空档。编译/测试结束后才开始测量，期间没有其他构建或仿真实例。
 
 ```bash
-cd /home/user/ros2_ws/src/my_dwa_controller
+cd ${REPO_ROOT}
 source /opt/ros/humble/setup.bash
-source /home/user/ros2_ws/install/setup.bash
+source ${MYDWA_WS}/install/setup.bash
 python3 benchmark/dynamic/diagnostics/release_comparison/run_all.py --tag new_comparison
 ```
 
 tag不可复用，所有输出在本模块runs内。单次命令：
 
 ```bash
-python3 benchmark/dynamic/diagnostics/release_comparison/run_one.py --variant release --scenario D01 --controller mydwa --headless --run-id release_new --preload /home/user/ros2_ws/src/my_dwa_controller/benchmark/dynamic/diagnostics/perf_build/libnavperf.so
+python3 benchmark/dynamic/diagnostics/release_comparison/run_one.py --variant release --scenario D01 --controller mydwa --headless --run-id release_new --preload ${REPO_ROOT}/benchmark/dynamic/diagnostics/perf_build/libnavperf.so
 ```
 
 将release换unoptimized即可切换。新launch_scene.sh只在原冻结V0.2启动器source原overlay之后追加所选包local_setup；其余场景、运动、导航发送和评价复用原代码。NAVPERF_MYDWA_LIB指定同一所选插件，/proc/<PID>/maps严格检查只映射该路径；每轮manifest保存实际路径/hash与映射证据，不能仅凭参数或日志中的类名判断Release已加载。
@@ -47,9 +47,9 @@ python3 benchmark/dynamic/diagnostics/release_comparison/run_one.py --variant re
 ## 离线结果与功能验证
 
 ```bash
-cd /home/user/ros2_ws/src/my_dwa_controller
+cd ${REPO_ROOT}
 source /opt/ros/humble/setup.bash
-source /home/user/ros2_ws/install/setup.bash
+source ${MYDWA_WS}/install/setup.bash
 python3 benchmark/dynamic/diagnostics/release_comparison/analyze_comparison.py
 python3 benchmark/dynamic/diagnostics/release_comparison/audit.py
 python3 -m unittest discover -s benchmark -p 'test_*.py' -v
@@ -61,8 +61,8 @@ python3 -m unittest discover -s benchmark -p 'test_*.py' -v
 
 ```bash
 source /opt/ros/humble/setup.bash
-source /home/user/ros2_ws/install_compile_comparison_20261020/release/share/my_dwa_controller/local_setup.bash
-ctest --test-dir /home/user/ros2_ws/build_compile_comparison_20261020/release -R '^test_' --output-on-failure
+source ${MYDWA_WS}/install_compile_comparison_20261020/release/share/my_dwa_controller/local_setup.bash
+ctest --test-dir ${MYDWA_WS}/build_compile_comparison_20261020/release -R '^test_' --output-on-failure
 ```
 
 另一条件将release换unoptimized。只运行现有功能目标，不声称全部lint通过。核心算法与参数哈希、V0.1/V0.2旧记录哈希由audit核对，未git add/commit/push。

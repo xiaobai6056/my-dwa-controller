@@ -144,7 +144,7 @@ D01物理接触：未优化 **{u['collisions']}/3**，Release **{release['collis
 
 工作分支feature/dynamic-obstacle。开始时Git已有 .gitignore、controller.hpp、controller.cpp修改及未跟踪benchmark；原样保留。初始Git差异、源码/配置/旧记录SHA、构建缓存、flags和原插件备份在evidence。没有git add/commit/push。没有修改CMakeLists、业务C++、YAML、D01尺寸/路径/运动触发和评价阈值。
 
-两个独立CMake build/install prefix分别为 `/home/user/ros2_ws/{{build,install}}_compile_comparison_20261020/{{unoptimized,release}}`，原build/install未覆盖。两者都从同一工作区源码、GCC、BUILD_TESTING=ON构建，所有package内部静态库随相同build type编译，没有重编译ROS/Nav2/DWB系统包。unoptimized是空build type（无-O），不是带-g的Debug。
+两个独立CMake build/install prefix分别为 `${{MYDWA_WS}}/{{build,install}}_compile_comparison_20261020/{{unoptimized,release}}`，原build/install未覆盖。两者都从同一工作区源码、GCC、BUILD_TESTING=ON构建，所有package内部静态库随相同build type编译，没有重编译ROS/Nav2/DWB系统包。unoptimized是空build type（无-O），不是带-g的Debug。
 
 原安装插件SHA256：`c38de8839ea2f22bfdd88f484316897dd4dc9b97f31b61052687ed1b90031c35`。
 

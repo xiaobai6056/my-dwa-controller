@@ -69,8 +69,8 @@
 
 ```bash
 source /opt/ros/humble/setup.bash
-source /home/user/ros2_ws/install/setup.bash
-cd /home/user/ros2_ws/src/my_dwa_controller/benchmark
+source ${MYDWA_WS}/install/setup.bash
+cd ${REPO_ROOT}/benchmark
 python3 run_suite.py --controllers mydwa dwb --scenes S01 S02 S03 S04 S05 S06 --repeats 3 --run-id static_v1_20261019
 python3 run_suite.py --aggregate results/v1/static_v1_20261019
 cat results/v1/static_v1_20261019/report.md

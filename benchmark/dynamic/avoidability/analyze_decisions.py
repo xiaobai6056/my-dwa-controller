@@ -2,8 +2,14 @@
 """Read actual locked Costmap and per-candidate feasibility/scores from original Release calls."""
 import argparse,csv,hashlib,json,math
 from pathlib import Path
+import os
+
 import numpy as np
 import matplotlib
+
+# External workspace install/build prefixes and baseline scripts are not bundled.
+ARCHIVE_WS = Path(os.environ.get("MYDWA_WS", str(Path.home() / "ros2_ws")))
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from kinematics import rollout
@@ -11,7 +17,7 @@ import sys
 sys.path.insert(0,str(Path(__file__).resolve().parent.parent/'timing_sweep'))
 from rules import response
 HERE=Path(__file__).resolve().parent
-RELEASE=Path('/home/user/ros2_ws/install_compile_comparison_20261020/release/lib/libmy_dwa_controller.so')
+RELEASE=(ARCHIVE_WS / 'install_compile_comparison_20261020/release/lib/libmy_dwa_controller.so')
 def jl(p):return [json.loads(s) for s in p.read_text().splitlines() if s]
 def dump(p,z):p.write_text(json.dumps(z,indent=2,allow_nan=False)+'\n')
 def stat(z):

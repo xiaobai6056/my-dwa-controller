@@ -6,7 +6,7 @@
 
 ## A. 修改摘要与工程复用
 
-原仓库位于 `/home/user/ros2_ws/src/my_dwa_controller`，HEAD 为 `1bad3b66aa64384d5955f1933dcfb5c1017dcd62`，分支 `feature/dynamic-obstacle`。工作区父目录不受 Git 管理，未发现 AGENTS.md。初始 tracked 工作树干净；根忽略规则原本整体忽略 benchmark/test/md，不能据此断言这些被忽略的既有文件没有历史用户修改。本次读取并保留了既有静态脚本、S01–S06 资产及结果，不做重构。
+原仓库位于 `${REPO_ROOT}`，HEAD 为 `1bad3b66aa64384d5955f1933dcfb5c1017dcd62`，分支 `feature/dynamic-obstacle`。工作区父目录不受 Git 管理，未发现 AGENTS.md。初始 tracked 工作树干净；根忽略规则原本整体忽略 benchmark/test/md，不能据此断言这些被忽略的既有文件没有历史用户修改。本次读取并保留了既有静态脚本、S01–S06 资产及结果，不做重构。
 
 新增目录 `benchmark/dynamic`，复用现有 `scenes.generate()`、`run_trial.Collector/preflight/ActionWorker`、MyDWA/DWB 冻结 YAML、`_baseline_common.sh` 和 `_baseline_processes.py`。唯一既有 tracked 文件改动是批次结束后为动态模块增加 `.gitignore` 例外。没有修改 Controller 源码、头文件、Nav2 配置、机器人/雷达/Costmap、静态评测实现和旧报告，没有提交或推送。
 
@@ -19,7 +19,7 @@
 |`start_scene.sh`, `run_suite.py`, `run.sh`|Headless、逐轮重启、交替 Controller、失败保留、CSV/JSON/Markdown|
 |`evaluation.py`|独立离线净间距、角速度、停止/恢复与终止评价|
 |`../test_dynamic.py`|新增 7 个边界/几何/异常路径回归，纳入现有 unittest discover|
-|`README.md`, `PLAN.md`, `RESULTS.md`|定义、复现、实施记录和本报告|
+|`README.md`, `RESULTS.md`|定义、复现和本报告|
 |`evidence/*`|构建、测试、运行、审计、失败原因摘录及生成脚本|
 |`first_run/*`|首轮 CSV/JSON/审计/manifest 副本与完整原始记录归档|
 |`../results/dynamic/*`|全部正式运行及 Smoke 的原始结果；依照原规则保持 Git 忽略|

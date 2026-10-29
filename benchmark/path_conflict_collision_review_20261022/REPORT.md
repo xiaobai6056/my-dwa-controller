@@ -12,7 +12,7 @@
 
 ## D01 2s：减速、回退、错误恢复
 
-原始 [launch.log](//wsl.localhost/Ubuntu-22.04/home/user/ros2_ws/src/my_dwa_controller/benchmark/path_conflict_v01_20261022/runs/prefix_fix_D01_t2/launch.log:332)。
+原始 `benchmark/path_conflict_v01_20261022/runs/prefix_fix_D01_t2/launch.log` (external historical input, line 332)。
 
 |时间|证据与状态|速度响应及解释|
 |---|---|---|
@@ -23,13 +23,13 @@
 |5.2s，行341–342|同目标重规划后，inner=0、outer=0、known=1但aligned=0；DwaFallback→Normal|这是已确认的状态漏洞：Fallback未纳入latched，清障计数即使归零也落回默认Normal。上限前后均0.26，并无该次转换直接抬高上限的证据。之后5条日志始终未对齐。|
 |6.0–6.08s，行346–347及contacts|仍Normal；6.0s再次无有效候选；接触stamp为绝对9.48s，即6.08s|接触前机器人仍在缓慢运动，源9.441s速度约0.04361m/s，角速度约0.445rad/s。低速不能证明已在冲突前安全停车。|
 
-源码对应：[RiskGovernor::decide](//wsl.localhost/Ubuntu-22.04/home/user/ros2_ws/src/my_dwa_controller/src/risk_governor.cpp:29) 的停车认证和回退；[applyRiskPolicy](//wsl.localhost/Ubuntu-22.04/home/user/ros2_ws/src/my_dwa_controller/src/controller.cpp:399) 的上限合并；[轨迹选择](//wsl.localhost/Ubuntu-22.04/home/user/ros2_ws/src/my_dwa_controller/src/controller.cpp:499) 的先拒绝、后评分、无best即抛异常。
+源码对应：[RiskGovernor::decide](../../src/risk_governor.cpp#L29) 的停车认证和回退；[applyRiskPolicy](../../src/controller.cpp#L399) 的上限合并；[轨迹选择](../../src/controller.cpp#L499) 的先拒绝、后评分、无best即抛异常。
 
 已核对cmd_vel_nav唯一发布者是controller_server。结合插件异常、服务器警告和话题零速，支持上述框架异常链路判断；本轮没有取得已安装Nav2对应的controller_server源码，未声称验证其具体实现行。
 
 ## D01 4s：预警限速、保持限制、回退后再加速
 
-原始 [launch.log](//wsl.localhost/Ubuntu-22.04/home/user/ros2_ws/src/my_dwa_controller/benchmark/path_conflict_v01_20261022/runs/prefix_fix_D01_t4/launch.log:339)。
+原始 `benchmark/path_conflict_v01_20261022/runs/prefix_fix_D01_t4/launch.log` (external historical input, line 339)。
 
 |时间|证据与状态|速度响应及解释|
 |---|---|---|
@@ -51,7 +51,7 @@
 
 修复后只改变2s在绝对8.6/8.8/9.0/9.2/9.4s的五条Normal→DwaFallback；**64条证据的修复前后速度上限全部相同，4s所有状态也相同**。这是Governor证据重放，不是地图/Controller闭环或避撞反事实，且省略了未打印的同状态控制周期；重复地图不推进清障计数，新增单测另覆盖该行为。不能推断本修复会改变真实碰撞结局。
 
-![实际速度与状态重放对照](//wsl.localhost/Ubuntu-22.04/home/user/ros2_ws/src/my_dwa_controller/benchmark/path_conflict_collision_review_20261022/state_velocity_review.png)
+![实际速度与状态重放对照](state_velocity_review.png)
 
 左侧只有旧试验的实际命令/odom，未生成修复后的速度曲线；右侧是原始证据重放。色带在两条记录之间延续最后状态，不能解释为新增采样。红线为接触消息stamp。
 
@@ -67,16 +67,16 @@
 
 ## 复现与回滚
 
-工作根为 `/home/user/ros2_ws`。构建及验证命令：
+工作根为 `${MYDWA_WS}`。构建及验证命令：
 
 ```bash
 source /opt/ros/humble/setup.bash
-cd /home/user/ros2_ws
+cd ${MYDWA_WS}
 colcon --log-base log_path_conflict_v01 build --build-base build_path_conflict_v01 --install-base install_path_conflict_v01 --packages-select my_dwa_controller --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
 source install_path_conflict_v01/setup.bash
 cd build_path_conflict_v01/my_dwa_controller
 ctest --output-on-failure
-cd /home/user/ros2_ws/src/my_dwa_controller/benchmark/path_conflict_collision_review_20261022
+cd ${REPO_ROOT}/benchmark/path_conflict_collision_review_20261022
 python3 -B analyze.py --label after
 python3 -B plot_review.py
 ```

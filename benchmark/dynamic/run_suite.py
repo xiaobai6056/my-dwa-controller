@@ -7,10 +7,15 @@ import hashlib
 import json
 import os
 from pathlib import Path
+
 import statistics
 import subprocess
 import sys
 import time
+
+
+# External workspace install/build prefixes and baseline scripts are not bundled.
+ARCHIVE_WS = Path(os.environ.get("MYDWA_WS", str(Path.home() / "ros2_ws")))
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
@@ -145,7 +150,7 @@ def cleanup_processes(runner, launch, env, launch_log, trial):
                 errors.append(repr(exc))
     try:
         cleanup = subprocess.run(
-            [sys.executable, '/home/user/ros2_ws/scripts/_baseline_processes.py'],
+            [sys.executable, str(ARCHIVE_WS / 'scripts/_baseline_processes.py')],
             env=env, stdout=launch_log, stderr=subprocess.STDOUT, timeout=15)
         if cleanup.returncode:
             errors.append('baseline cleanup returned ' +

@@ -54,7 +54,7 @@ controller_server:
 `scan_tracker.enabled` 默认false，另两键默认如上。启用scan而关闭path_conflict会在
 configure报错，避免悄悄启用无效功能。其余感知常量见 ScanTrackerConfig/实现，
 本轮没有依据障碍启动时刻写检测条件，没有阈值搜索。scan=false时不创建订阅。
-插件独立安装在 `/home/user/ros2_ws/install_scan_trend/my_dwa_controller`。
+插件独立安装在 `${MYDWA_WS}/install_scan_trend/my_dwa_controller`。
 
 日志 `[SCAN_STATUS]` 给出扫描stamp、frame、序号、新鲜度和TF失败次数；
 `[SCAN_TRACK]` 给出track id、源stamp、位置/速度、可见半径、置信度、残差、拟合

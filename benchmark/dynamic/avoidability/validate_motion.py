@@ -2,7 +2,13 @@
 """Gazebo-only prescribed controls. Not Nav2 success-rate data; no controller plugin loaded."""
 import argparse,json,math,os,signal,subprocess,sys,time
 from pathlib import Path
+import os
+
 from types import SimpleNamespace
+
+# External workspace install/build prefixes and baseline scripts are not bundled.
+ARCHIVE_WS = Path(os.environ.get("MYDWA_WS", str(Path.home() / "ros2_ws")))
+
 HERE=Path(__file__).resolve().parent
 sys.path.insert(0,str(HERE.parent));sys.path.insert(0,str(HERE.parent/'timing_sweep'))
 from motion import Motion
@@ -25,7 +31,7 @@ def main():
     procs=[];manifest=dict(classification='gazebo_only_counterfactual_validation',arguments=vars(a),nav2_action_result=None,not_benchmark_success_rate=True)
     c=None
     try:
-        subprocess.run([sys.executable,'/home/user/ros2_ws/scripts/_baseline_processes.py'],env=env,stdout=log,stderr=log,check=True,timeout=20)
+        subprocess.run([sys.executable,str(ARCHIVE_WS / 'scripts/_baseline_processes.py')],env=env,stdout=log,stderr=log,check=True,timeout=20)
         world=HERE.parent/'assets/D01/world.sdf';sdf=Path('/opt/ros/humble/share/nav2_bringup/worlds/waffle.model')
         import hashlib
         manifest.update(world=str(world),world_sha256=hashlib.sha256(world.read_bytes()).hexdigest(),robot_sdf=str(sdf),robot_sha256=hashlib.sha256(sdf.read_bytes()).hexdigest())
@@ -93,7 +99,7 @@ def main():
                 os.killpg(proc.pid,signal.SIGINT)
                 try:proc.wait(timeout=10)
                 except subprocess.TimeoutExpired:os.killpg(proc.pid,signal.SIGKILL);proc.wait()
-        cleanup=subprocess.run([sys.executable,'/home/user/ros2_ws/scripts/_baseline_processes.py'],env=env,stdout=log,stderr=log,timeout=20)
+        cleanup=subprocess.run([sys.executable,str(ARCHIVE_WS / 'scripts/_baseline_processes.py')],env=env,stdout=log,stderr=log,timeout=20)
         manifest['cleanup_returncode']=cleanup.returncode
         for f in streams.values():f.close()
         log.close();(out/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')

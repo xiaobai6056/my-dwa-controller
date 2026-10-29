@@ -31,15 +31,15 @@
 
 ## 决策确实发生了变化
 
-修改版2s的 [launch.log:343](//wsl.localhost/Ubuntu-22.04/home/user/ros2_ws/src/my_dwa_controller/benchmark/fallback_acceleration_20261022/runs/preference_D01_t2/launch.log:343)：绝对仿真8.1s，即导航后5.1s，输入v=0.016732；84条不加速候选可行。最终选v=0.016732、总分0.531486，而保留的更快前进候选v=0.022379、总分0.524127更低。两者mean/max障碍代价都为234。说明新的优先级确实压过了原加权分数对更快候选的偏好，而没有将该候选删掉。行355还有同类证据：输入/选择0.011496，更快前进候选0.014368的分数更低。
+修改版2s的 `benchmark/fallback_acceleration_20261022/runs/preference_D01_t2/launch.log` (external historical input, line 343)：绝对仿真8.1s，即导航后5.1s，输入v=0.016732；84条不加速候选可行。最终选v=0.016732、总分0.531486，而保留的更快前进候选v=0.022379、总分0.524127更低。两者mean/max障碍代价都为234。说明新的优先级确实压过了原加权分数对更快候选的偏好，而没有将该候选删掉。行355还有同类证据：输入/选择0.011496，更快前进候选0.014368的分数更低。
 
 全部修改版日志共55条成功Fallback选择记录（2s 10、4s重复1、S04 44），均满足选择速度≤软上限；均未选择加速退路。它们按不同地图状态记录，**不是每个20Hz周期的全量证据**。Gazebo未出现“低速组全部失效、加速组仍可行”的成功退路案例；这一分支仅在真实插件单测中验证。
 
-![独立运行速度对照](//wsl.localhost/Ubuntu-22.04/home/user/ros2_ws/src/my_dwa_controller/benchmark/fallback_acceleration_20261022/velocity_comparison.png)
+![独立运行速度对照](velocity_comparison.png)
 
 命令使用接收clock，odom使用源stamp，不能用两条曲线的间距精确估计执行延迟。虚线为首次Fallback，红线为接触。右下那次未触发Fallback，不能拿来证明选择策略失效或有效。
 
-![已记录的Fallback选择](//wsl.localhost/Ubuntu-22.04/home/user/ros2_ws/src/my_dwa_controller/benchmark/fallback_acceleration_20261022/selection_evidence.png)
+![已记录的Fallback选择](selection_evidence.png)
 
 ## 代码与测试证据
 
@@ -65,13 +65,13 @@ Gazebo对照插件SHA256为 `54edf237e23192d137fb703821c88379dbd662d453571959bd1
 
 ```bash
 source /opt/ros/humble/setup.bash
-cd /home/user/ros2_ws
+cd ${MYDWA_WS}
 colcon --log-base log_fallback_acceleration build --build-base build_fallback_acceleration --install-base install_fallback_acceleration --packages-select my_dwa_controller --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
 source install_fallback_acceleration/setup.bash
 cd build_fallback_acceleration/my_dwa_controller
 ctest -R test_ --output-on-failure
-cd /home/user/ros2_ws/src/my_dwa_controller/benchmark/fallback_acceleration_20261022
+cd ${REPO_ROOT}/benchmark/fallback_acceleration_20261022
 python3 -B analyze.py
 ```
 
-运行命令中的tag输出目录已存在；复现Gazebo应换新tag，不覆盖记录。旧前缀 `/home/user/ros2_ws/install_path_conflict_v01/my_dwa_controller` 未覆盖；新版本仅装入独立`install_fallback_acceleration`。不加载新前缀可回到原版本；或禁用原`path_conflict.enabled`并重新configure。撤销源码可先`git apply --reverse --check incremental.patch`，确认后反向应用，保留其他未提交改动。
+运行命令中的tag输出目录已存在；复现Gazebo应换新tag，不覆盖记录。旧前缀 `${MYDWA_WS}/install_path_conflict_v01/my_dwa_controller` 未覆盖；新版本仅装入独立`install_fallback_acceleration`。不加载新前缀可回到原版本；或禁用原`path_conflict.enabled`并重新configure。撤销源码可先`git apply --reverse --check incremental.patch`，确认后反向应用，保留其他未提交改动。

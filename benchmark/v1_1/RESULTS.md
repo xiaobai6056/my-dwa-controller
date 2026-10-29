@@ -104,7 +104,7 @@ S06 终点控制由 MyDWA `Rotating` 日志和零 Spin Action 交叉验证。缺
 实际执行的主要命令（WSL，已 source Humble 和 overlay）：
 
 ```bash
-cd /home/user/ros2_ws
+cd ${MYDWA_WS}
 bash src/my_dwa_controller/benchmark/v1_1/red_tests.sh  # 旧实现上先验证红灯
 colcon build --packages-select my_dwa_controller --symlink-install
 ROS_DOMAIN_ID=97 colcon test --packages-select my_dwa_controller --event-handlers console_direct+
@@ -114,7 +114,7 @@ bash src/my_dwa_controller/benchmark/v1_1/evidence/run_remaining.sh
 cd src/my_dwa_controller/benchmark
 python3 v1_1/evidence/analyze.py > v1_1/evidence/analysis.log
 python3 v1_1/evidence/capture_runtime.py final_process_audit.json
-python3 v1_1/evidence/freeze.py
+# Historical one-off freeze step omitted from the public archive.
 ```
 
 其中红灯脚本是历史执行记录，当前插件已修复，不应期望重跑它仍然失败。run-id 必须唯一；新试验重跑方法见 README，不覆盖验收目录。冻结配置 `configs/mydwa_static_v1_1.yaml` 与原参数完全相同，**必须结合新插件使用**，只更换 YAML 不会获得本修复。尚未解决项是控制循环耗时、短暂无可行轨迹、可靠安全几何指标、S02 的 V1.1 补测和更大样本可靠性估计；这些不作为本轮额外调优或重构的理由。

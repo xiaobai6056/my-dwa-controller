@@ -7,7 +7,7 @@
 ## 证据与版本
 
 - 输入：`../timing_sweep/outputs/results.json`，原2/3/4/5s各两控制器3次，共24次物理接触；全部保留。
-- 实际 Release 路径：`/home/user/ros2_ws/install_compile_comparison_20261020/release/lib/libmy_dwa_controller.so`。SHA256：`cceb8c0630836b22916da5e839176497acddabc38cb65028fa3283e5daca85ee`。两轮新 Nav2 诊断均由 `/proc/<pid>/maps` 确认加载该路径，原数据与新诊断运行参数逐项相等。编译使用既有 `-O3 -DNDEBUG`，不重建控制插件。
+- 实际 Release 路径：`${MYDWA_WS}/install_compile_comparison_20261020/release/lib/libmy_dwa_controller.so`。SHA256：`cceb8c0630836b22916da5e839176497acddabc38cb65028fa3283e5daca85ee`。两轮新 Nav2 诊断均由 `/proc/<pid>/maps` 确认加载该路径，原数据与新诊断运行参数逐项相等。编译使用既有 `-O3 -DNDEBUG`，不重建控制插件。
 - 实际启动默认模型为 `/opt/ros/humble/share/nav2_bringup/worlds/waffle.model`，SHA256 `4c57fc31210114cef24ec88408c07a53ece8497c32a0377666e9bc18a3eca30c`；不是凭名称假定另一个 TurtleBot3 SDF。`evidence/actual_model.json` 保存所有碰撞形状投影。
 - 本次前后冻结审计：5007 个既有文件哈希一致，Git diff/状态一致，保留用户未提交的 C++/头文件修改。`evidence/before.json`、`final_audit.json` 可核查。
 

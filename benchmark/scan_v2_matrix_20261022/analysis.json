@@ -1,7 +1,7 @@
 [
   {
     "name": "v2_t2_a_20261022_D01_t2",
-    "directory": "/home/user/ros2_ws/src/my_dwa_controller/benchmark/scan_v2_matrix_20261022/runs/v2_t2_a_20261022_D01_t2",
+    "directory": "${REPO_ROOT}/benchmark/scan_v2_matrix_20261022/runs/v2_t2_a_20261022_D01_t2",
     "epoch": 3.4,
     "valid": true,
     "result": "SUCCEEDED",
@@ -628,7 +628,7 @@
         "qos_overrides./clock.subscription.reliability": "best_effort",
         "topic_name": "map",
         "use_sim_time": true,
-        "yaml_filename": "/home/user/ros2_ws/src/my_dwa_controller/benchmark/dynamic/assets/D01/map.yaml"
+        "yaml_filename": "${REPO_ROOT}/benchmark/dynamic/assets/D01/map.yaml"
       },
       "controller_server": {
         "/bond_disable_heartbeat_timeout": true,
@@ -1099,7 +1099,7 @@
   },
   {
     "name": "v2_t2_b_20261022_D01_t2",
-    "directory": "/home/user/ros2_ws/src/my_dwa_controller/benchmark/scan_v2_matrix_20261022/runs/v2_t2_b_20261022_D01_t2",
+    "directory": "${REPO_ROOT}/benchmark/scan_v2_matrix_20261022/runs/v2_t2_b_20261022_D01_t2",
     "epoch": 3.6,
     "valid": true,
     "result": "SUCCEEDED",
@@ -1850,7 +1850,7 @@
         "qos_overrides./clock.subscription.reliability": "best_effort",
         "topic_name": "map",
         "use_sim_time": true,
-        "yaml_filename": "/home/user/ros2_ws/src/my_dwa_controller/benchmark/dynamic/assets/D01/map.yaml"
+        "yaml_filename": "${REPO_ROOT}/benchmark/dynamic/assets/D01/map.yaml"
       },
       "controller_server": {
         "/bond_disable_heartbeat_timeout": true,
@@ -2321,7 +2321,7 @@
   },
   {
     "name": "v2_t4_20261022_D01_t4",
-    "directory": "/home/user/ros2_ws/src/my_dwa_controller/benchmark/scan_v2_matrix_20261022/runs/v2_t4_20261022_D01_t4",
+    "directory": "${REPO_ROOT}/benchmark/scan_v2_matrix_20261022/runs/v2_t4_20261022_D01_t4",
     "epoch": 3.3,
     "valid": true,
     "result": "CANCELED",
@@ -2693,7 +2693,7 @@
         "qos_overrides./clock.subscription.reliability": "best_effort",
         "topic_name": "map",
         "use_sim_time": true,
-        "yaml_filename": "/home/user/ros2_ws/src/my_dwa_controller/benchmark/dynamic/assets/D01/map.yaml"
+        "yaml_filename": "${REPO_ROOT}/benchmark/dynamic/assets/D01/map.yaml"
       },
       "controller_server": {
         "/bond_disable_heartbeat_timeout": true,
@@ -3164,7 +3164,7 @@
   },
   {
     "name": "v2_t6_20261022_D01_t6",
-    "directory": "/home/user/ros2_ws/src/my_dwa_controller/benchmark/scan_v2_matrix_20261022/runs/v2_t6_20261022_D01_t6",
+    "directory": "${REPO_ROOT}/benchmark/scan_v2_matrix_20261022/runs/v2_t6_20261022_D01_t6",
     "epoch": 3.8,
     "valid": true,
     "result": "SUCCEEDED",
@@ -3411,7 +3411,7 @@
         "qos_overrides./clock.subscription.reliability": "best_effort",
         "topic_name": "map",
         "use_sim_time": true,
-        "yaml_filename": "/home/user/ros2_ws/src/my_dwa_controller/benchmark/dynamic/assets/D01/map.yaml"
+        "yaml_filename": "${REPO_ROOT}/benchmark/dynamic/assets/D01/map.yaml"
       },
       "controller_server": {
         "/bond_disable_heartbeat_timeout": true,
@@ -3882,7 +3882,7 @@
   },
   {
     "name": "prior_v2_t2",
-    "directory": "/home/user/ros2_ws/src/my_dwa_controller/benchmark/scan_emergency_20261022/runs/round2_D01_t2",
+    "directory": "${REPO_ROOT}/benchmark/scan_emergency_20261022/runs/round2_D01_t2",
     "epoch": 4.1,
     "valid": true,
     "result": "SUCCEEDED",
@@ -4742,7 +4742,7 @@
         "qos_overrides./clock.subscription.reliability": "best_effort",
         "topic_name": "map",
         "use_sim_time": true,
-        "yaml_filename": "/home/user/ros2_ws/src/my_dwa_controller/benchmark/dynamic/assets/D01/map.yaml"
+        "yaml_filename": "${REPO_ROOT}/benchmark/dynamic/assets/D01/map.yaml"
       },
       "controller_server": {
         "/bond_disable_heartbeat_timeout": true,

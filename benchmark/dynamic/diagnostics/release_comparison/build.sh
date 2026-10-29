@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 set -eo pipefail
+
+# Baseline helper scripts/install prefixes live outside this archive.
+export MYDWA_WS=${MYDWA_WS:-"$HOME/ros2_ws"}
+REPO_ROOT=$(git -C "$(dirname -- "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)
 source /opt/ros/humble/setup.bash
 here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-root=/home/user/ros2_ws/src/my_dwa_controller
-work=/home/user/ros2_ws
+root=${REPO_ROOT}
+work=${MYDWA_WS}
 mkdir -p "$work/build_compile_comparison_20261020" "$work/install_compile_comparison_20261020"
 touch "$work/build_compile_comparison_20261020/COLCON_IGNORE" "$work/install_compile_comparison_20261020/COLCON_IGNORE"
 variants=("$@")

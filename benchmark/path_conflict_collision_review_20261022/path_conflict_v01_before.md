@@ -51,7 +51,7 @@ path_conflict:
 
 修改节点参数后需要重新 cleanup/configure，单纯 `ros2 param set` 不会更新本模块。
 回滚为 `enabled: false` 并重新配置；现有 YAML 缺省即关闭。原工作区安装目录未覆盖，
-本轮独立前缀为 `/home/user/ros2_ws/install_path_conflict_v01/my_dwa_controller`。
+本轮独立前缀为 `${MYDWA_WS}/install_path_conflict_v01/my_dwa_controller`。
 
 ## 检测与状态转换
 

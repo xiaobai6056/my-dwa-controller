@@ -1,7 +1,13 @@
 """Build selection and runtime library identity regression tests."""
 import importlib.util
 from pathlib import Path
+import os
+
 import unittest
+
+
+# External workspace install/build prefixes and baseline scripts are not bundled.
+ARCHIVE_WS = Path(os.environ.get("MYDWA_WS", str(Path.home() / "ros2_ws")))
 
 class ComparisonTests(unittest.TestCase):
     def api(self):
@@ -16,7 +22,7 @@ class ComparisonTests(unittest.TestCase):
             prefix,plugin=api.selection(variant)
             self.assertEqual(prefix.name,variant)
             self.assertEqual(plugin,prefix/'lib/libmy_dwa_controller.so')
-            self.assertNotEqual(prefix,Path('/home/user/ros2_ws/install/my_dwa_controller'))
+            self.assertNotEqual(prefix,(ARCHIVE_WS / 'install/my_dwa_controller'))
         with self.assertRaises(ValueError):api.selection('debug')
 
     def test_mapping_requires_exact_selected_plugin_without_second_copy(self):

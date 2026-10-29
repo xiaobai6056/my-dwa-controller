@@ -3,8 +3,13 @@ import hashlib
 import json
 import os
 from pathlib import Path
+
 import shutil
 import subprocess
+
+# External workspace install/build prefixes and baseline scripts are not bundled.
+ARCHIVE_WS = Path(os.environ.get("MYDWA_WS", str(Path.home() / "ros2_ws")))
+
 HERE=Path(__file__).resolve().parents[1]
 ROOT=HERE.parents[2]
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
@@ -15,7 +20,7 @@ for source in (HERE/'perf_probe.cpp',HERE/'build_probe.sh',HERE/'perf_build/libn
     if dest.exists():assert sha(dest)==sha(source)
     else:shutil.copyfile(source,dest)
 (measured/'AMENT_IGNORE').touch()
-files=[*measured.glob('*'),Path('/opt/ros/humble/lib/libdwb_core.so'),Path('/opt/ros/humble/include/rclcpp/rclcpp/rate.hpp'),ROOT/'include/my_dwa_controller/controller_diagnostics.hpp',Path('/home/user/ros2_ws/build/my_dwa_controller/CMakeFiles/my_dwa_controller.dir/flags.make'),Path('/home/user/ros2_ws/build/my_dwa_controller/CMakeFiles/trajectory_scorer.dir/flags.make')]
+files=[*measured.glob('*'),Path('/opt/ros/humble/lib/libdwb_core.so'),Path('/opt/ros/humble/include/rclcpp/rclcpp/rate.hpp'),ROOT/'include/my_dwa_controller/controller_diagnostics.hpp',(ARCHIVE_WS / 'build/my_dwa_controller/CMakeFiles/my_dwa_controller.dir/flags.make'),(ARCHIVE_WS / 'build/my_dwa_controller/CMakeFiles/trajectory_scorer.dir/flags.make')]
 info=dict(files={str(f):sha(f) for f in files if f.is_file()},
     environment={k:os.environ.get(k) for k in ('DISPLAY','WAYLAND_DISPLAY','XDG_RUNTIME_DIR','WSL_DISTRO_NAME')},
     capture_note='Probe source/binary unchanged since actual runs; hashes appended here without rewriting original manifests. Single serialized FollowPath controller only; no concurrent-first-call guarantee.')

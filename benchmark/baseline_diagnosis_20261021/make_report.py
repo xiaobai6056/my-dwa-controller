@@ -76,7 +76,7 @@ def main():
         '2. **评分改动先做小范围可证伪实验**：在S04/S05比较固定权重下的峰值暴露、不同栅格与重复采样影响，再决定是否试Top-K。要求既保留静态通过能力，又能说明关键候选的评分差确实被合理改变；本诊断没有做该改动或声称收益。',
         '3. **历史信息先做时间质量/误报验收**：保留原发布采样条件与静止阶段反例，检查源时间TF、融合时间可得性和至少3图方向线索的lead。当前粗粒度数据不足以支持直接实现在线时序风险模块。','',
         '## 交付与复现','',
-        '- `README.md`：命令、数据定义和原始/重建字段界限。`PLAN.md`：已批准范围与执行记录。',
+        '- `README.md`：命令、数据定义和原始/重建字段界限。历史过程计划不属于本公开归档。',
         '- `outputs/score_summary.json`、`score_cycles.jsonl.gz`、`all_candidates.csv.gz`、`key_candidates.csv`、`critical_decisions.json`：全部原始评分贡献、选择标记、离线mean/max/Top-K/不同格数及核验。',
         '- `outputs/maps_details.json`、`maps_pairs.csv`、`maps_key_availability.csv`、`maps_findings.md`：逐对格心变化、坐标、时间支持、误报及可用性。`outputs/bag_summary.json`：源stamp/TF/GT限制。',
         '- `runs/*`：6份新bag、原始probe JSONL、原runner输出与场景/config/命令、加载库映射。旧输入留在原处，`outputs/inventory.json`与初始5252文件散列提供路径和版本证据。',

@@ -45,8 +45,8 @@ S03 是多次连续转弯路线，不是数学正弦曲线；走廊墙体阻断�
 
 ```bash
 source /opt/ros/humble/setup.bash
-source /home/user/ros2_ws/install/setup.bash
-cd /home/user/ros2_ws/src/my_dwa_controller/benchmark
+source ${MYDWA_WS}/install/setup.bash
+cd ${REPO_ROOT}/benchmark
 python3 scenes.py generate
 python3 -m unittest discover -p 'test_*.py' -v
 
@@ -71,14 +71,14 @@ summary 和只有表头的 CSV。批量任务中不要另启同一 domain 的 ba
 
 ```bash
 # 终端 A：每次重测 Ctrl+C 停止并等清理完成，再启动，恢复物理/定位初值。
-bash /home/user/ros2_ws/src/my_dwa_controller/benchmark/start_scene.sh mydwa S02
+bash ${REPO_ROOT}/benchmark/start_scene.sh mydwa S02
 
 # 终端 B（同样 source ROS 和 overlay）：
-cd /home/user/ros2_ws/src/my_dwa_controller/benchmark
+cd ${REPO_ROOT}/benchmark
 python3 run_trial.py --controller mydwa --start 0.5 0 0 \
   --goal 5 4.5 1.5707963267948966 --timeout 150 --record-navigation \
-  --world-file /home/user/ros2_ws/src/my_dwa_controller/benchmark/assets/S02/world.sdf \
-  --startup-script /home/user/ros2_ws/src/my_dwa_controller/benchmark/start_scene.sh
+  --world-file ${REPO_ROOT}/benchmark/assets/S02/world.sdf \
+  --startup-script ${REPO_ROOT}/benchmark/start_scene.sh
 ```
 
 初始化设置实际 spawn 的 x/y/yaw，并等待 AMCL active 后以同一位置设置初值。
@@ -184,7 +184,7 @@ trial 时间外或未接收的 Goal，并按 UUID 去重。缺少依据时记 nu
 被单一 Controller 的签名误判为公平通过。
 
 ```bash
-cd /home/user/ros2_ws/src/my_dwa_controller/benchmark
+cd ${REPO_ROOT}/benchmark
 # 不启动仿真，重新计算单次指标：
 python3 metrics.py results/v1/static_v1_20261019/mydwa/S01/trial_001
 # 不启动仿真，重算所有已有 trial 指标并聚合：
@@ -205,13 +205,13 @@ uncrustify 问题单独列出，不修算法文件来隐藏已有格式故障。
 
 ```bash
 # 构建以及 C++ / Python / lint（已实际执行；历史 uncrustify 项仍失败）：
-cd /home/user/ros2_ws
+cd ${MYDWA_WS}
 colcon build --packages-select my_dwa_controller --symlink-install
 ROS_DOMAIN_ID=97 colcon test --packages-select my_dwa_controller --event-handlers console_direct+
 colcon test-result --test-result-base build/my_dwa_controller/test_results --verbose
 
 # 单独验证数据、核心文件未变及自动化测试：
-bash /home/user/ros2_ws/src/my_dwa_controller/benchmark/evidence/check_v1.sh
+bash ${REPO_ROOT}/benchmark/evidence/check_v1.sh
 ```
 
 最终正式数值与每次原始配置以 `results/v1/static_v1_20261019/report.md`、

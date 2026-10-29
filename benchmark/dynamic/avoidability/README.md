@@ -5,20 +5,19 @@
 ## 从干净 WSL 终端复现
 
 ```bash
-cd /home/user/ros2_ws/src/my_dwa_controller
+cd ${REPO_ROOT}
 source /opt/ros/humble/setup.bash
-source /home/user/ros2_ws/install/setup.bash
-source /home/user/ros2_ws/install_compile_comparison_20261020/release/share/my_dwa_controller/local_setup.bash
+source ${MYDWA_WS}/install/setup.bash
+source ${MYDWA_WS}/install_compile_comparison_20261020/release/share/my_dwa_controller/local_setup.bash
 D=benchmark/dynamic/avoidability
 
 # 保持既有Release库及历史原始数据；不需要重建Controller。
-sha256sum /home/user/ros2_ws/install_compile_comparison_20261020/release/lib/libmy_dwa_controller.so
+sha256sum ${MYDWA_WS}/install_compile_comparison_20261020/release/lib/libmy_dwa_controller.so
 # expected cceb8c0630836b22916da5e839176497acddabc38cb65028fa3283e5daca85ee
 
 python3 "$D/analyze_offline.py"
 bash "$D/build_probe.sh"       # 只构建外部观察器，-O2不影响Controller的-O3
 bash "$D/calibrate_probe.sh"   # 原返回/异常转发及读回校验
-python3 "$D/prepare_diagnostic.py"
 bash "$D/verify.sh"
 
 # 仅2个横穿时机、3个独立运动验证+2个Nav2诊断；使用新的唯一标签。
@@ -53,7 +52,7 @@ bash "$D/diagnostic.sh" --start-time 4 --run-id unique_diagnostic_t4
 - `analyze_offline.py`：重用24次旧GT，生成每0.1s策略风险、逐轮制动过渡格及风险曲线；0.03/0.12m是条件余量和假设敏感性。
 - `validate_motion.py` / `validate.sh`：Gazebo-only运动入口，唯一cmd_vel发布者检查、源时间戳odom、GT/物理接触/命令/实际障碍启动验证、超时及进程清理。
 - `decision_probe.cpp` / `build_probe.sh` / fixture：外部观察器及转发校验；候选全量可行性/评分、最优完整轨迹和实际Costmap，每周期原始JSONL。
-- `prepare_diagnostic.py` / `run_diagnostic.py` / `diagnostic.sh`：新监督器适配，复用原launch和trial_entry，不改旧文件。
+- `run_diagnostic.py` / `diagnostic.sh`：新监督器适配，复用原launch和trial_entry，不改旧文件。
 - `analyze_decisions.py`：逐周期计数、全部加权评分、最优选择与最优轨迹地图代价一致性抽查/全检；支持CSV/JSON及原始Costmap图。候选全部轨迹未保存，未独立重算每条候选的地图统计。
 - `analyze_validation.py`：持续停稳、物理接触、受控通过与预测对照。
 - `runs/`：每次独立进程原始数据，包括失败；`outputs/`：CSV/JSON/PNG；`evidence/`：冻结哈希、fixture、构建、测试和失败日志。

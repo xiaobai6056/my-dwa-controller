@@ -1,29 +1,76 @@
 # Scan Emergency V2 archive
 
-This branch preserves the Scan Emergency V2 proof of concept as it stood on
-2026-10-23. Its parent is static V1.1, commit
-`1bad3b66aa64384d5955f1933dcfb5c1017dcd62` (`v1.1-static`).
+This archive preserves the Scan Emergency V2 proof of concept from 2026-10-23,
+based on static V1.1 commit `1bad3b66aa64384d5955f1933dcfb5c1017dcd62`
+(`v1.1-static`). Controller source, configuration, scenario definitions, assets,
+C++ tests/fixtures, numerical results, plots and failure records are preserved.
+Historical reported runs and test counts are not new validation runs.
 
-The archive includes controller source, configuration, all available C++ tests
-(including previously ignored static tests), Benchmark definitions and supporting
-scripts, experiment reports, and selected compact result tables and figures.
-The source and configuration are archived without algorithm changes.
+## Start here
 
-Read `docs/scan_emergency_v02.md`,
-`benchmark/scan_emergency_20261022/REPORT.md`, and
-`benchmark/scan_v2_matrix_20261022/REPORT.md` for scope, limitations, and the
-observed t4 collision. This is a proof of concept, not a general dynamic obstacle
-avoidance release. Reported historical test results are not new test runs.
+| Purpose | Canonical entry |
+| --- | --- |
+| Static scenarios and assets | [scenarios.yaml](../benchmark/scenarios.yaml), [scenes.py](../benchmark/scenes.py), [assets](../benchmark/assets/) |
+| Static runners | [run_trial.py](../benchmark/run_trial.py), [run_suite.py](../benchmark/run_suite.py), [V1 usage](../benchmark/V1_README.md) |
+| Dynamic scenarios and assets | [scenarios.json](../benchmark/dynamic/scenarios.json), [scenario.py](../benchmark/dynamic/scenario.py), [assets](../benchmark/dynamic/assets/) |
+| Dynamic runners | [run_trial.py](../benchmark/dynamic/run_trial.py), [run_suite.py](../benchmark/dynamic/run_suite.py), [usage](../benchmark/dynamic/README.md) |
+| Scan Emergency V2 behavior | [design and limitations](scan_emergency_v02.md), [initial report](../benchmark/scan_emergency_20261022/REPORT.md) |
+| Final diagnostic matrix | [report](../benchmark/scan_v2_matrix_20261022/REPORT.md), [summary.csv](../benchmark/scan_v2_matrix_20261022/summary.csv), [timeline.csv](../benchmark/scan_v2_matrix_20261022/timeline.csv), [figure](../benchmark/scan_v2_matrix_20261022/matrix_interaction.png) |
+| Earlier static results | [V1](../benchmark/V1_RESULTS.md), [V1.1](../benchmark/v1_1/RESULTS.md) |
+| Earlier dynamic investigations | [dynamic results](../benchmark/dynamic/RESULTS.md), [timing sweep](../benchmark/dynamic/timing_sweep/REPORT_TIMING_SWEEP.md), [avoidability](../benchmark/dynamic/avoidability/REPORT_AVOIDABILITY.md) |
 
-Raw bags/JSONL, runtime and build logs, compiled libraries, replay recordings,
-source ZIP/TAR snapshots, caches, and temporary/build output are deliberately
-excluded from Git. Their complete external workspace snapshot remains separate
-and unchanged. Replaying or regenerating results requires those external inputs;
-paths in historical reports refer to their original experiment environment.
+The final matrix contains four historical valid Gazebo trials:
 
-No dynamic Benchmark is migrated to the new V3 branch. `feature/dynamic-v3`
-starts at the exact static V1.1 commit, without dynamic source or configuration.
-Note that static V1.1 originally tracks neither the test directory nor the
-Benchmark directory; its CMake test references therefore need separately scoped
-test restoration before a fresh BUILD_TESTING build. This archive preserves the
-available tests without changing that baseline.
+| Condition | Recorded outcome | Navigation time (s) | Approximate minimum gap (m) |
+| --- | --- | ---: | ---: |
+| D01 t2 A | Succeeded, no recorded contact | 53.7 | 0.094 |
+| D01 t2 B | Succeeded, no recorded contact | 26.0 | 0.302 |
+| D01 t4 | Canceled after right-wheel/pillar contact | 7.0 | 0.000 |
+| D01 t6 | Succeeded, no dynamic risk trigger | 15.1 | 0.166 |
+
+This is not a general dynamic obstacle avoidance release. In t4 the first
+Fallback state did not impose effective deceleration before contact. Stopping
+certification and angular motion were inconsistent across t2 trials; a recorded
+Scan visibility gap produced an isolated clear-area pulse. Terminal rotation
+also inflated t2 A's completion time. Approximate geometry and receive-clock
+alignment limit clearance/timing interpretation. The report preserves the
+observations and unresolved causes; these four trials do not establish a
+statistical success rate or a safety guarantee.
+
+## Reproduction boundary
+
+The public tree includes compact JSON/CSV results, figures, source and tests.
+Raw bags/JSONL, full trial directories, build/runtime logs, installed plugins,
+source ZIP/TAR snapshots and complete external evidence are excluded. Historical
+reports describe the original collection; references to `runs/`, `outputs/`,
+`evidence/` or frozen artifacts may require that separately retained data. Do
+not infer that a referenced external file is present in this checkout.
+
+For commands in historical documents, set paths for your own environment:
+
+```bash
+export REPO_ROOT="$(git rev-parse --show-toplevel)"  # run inside this clone
+export MYDWA_WS="/path/to/external/ros2_ws"
+cd "$REPO_ROOT"
+source /opt/ros/humble/setup.bash
+# Source the appropriate external install only after checking its version.
+```
+
+Executable helpers derive repository paths from their location and read
+`MYDWA_WS` for external install/build prefixes and baseline scripts (default:
+`$HOME/ros2_ws`). `${REPO_ROOT}` and `${MYDWA_WS}` strings in archived JSON and
+historical prose are redacted provenance placeholders, not new measurements.
+The baseline workspace's `scripts/_baseline_common.sh`,
+`scripts/_baseline_processes.py`, and baseline launch scripts are external
+prerequisites, not supplied by this archive. Offline regeneration also needs
+its original recordings at the documented relative locations. Frozen historical
+runner hash checks still require their original external manifests; a new
+experiment needs a new provenance snapshot after relocating scripts. Performance
+probes accept `NAVPERF_MYDWA_LIB`; otherwise the dynamic loader resolves
+`libmy_dwa_controller.so` from the configured library search path.
+
+One-off process plans, script-authoring mutations, source/result packagers and
+initial workspace snapshot utilities were removed after checking that retained
+executables do not reference them. Existing launchers, analysis/report tools,
+probe/fixture sources and benchmark evaluation thresholds remain. No Gazebo
+trial was run for this public presentation cleanup.

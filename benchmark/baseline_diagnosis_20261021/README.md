@@ -27,8 +27,8 @@ Temporal extraction uses OccupancyGrid header stamps in odom, registered grid ce
 
 ```bash
 source /opt/ros/humble/setup.bash
-source /home/user/ros2_ws/install/setup.bash
-cd /home/user/ros2_ws/src/my_dwa_controller/benchmark/baseline_diagnosis_20261021
+source ${MYDWA_WS}/install/setup.bash
+cd ${REPO_ROOT}/benchmark/baseline_diagnosis_20261021
 export PYTHONDONTWRITEBYTECODE=1
 
 python3 -B -m unittest test_scoring test_bag_export test_temporal -v
@@ -50,7 +50,7 @@ python3 -B make_report.py
 
 These commands regenerate only derived artifacts in this directory. Original inputs remain in place and are hashed in the preservation snapshot. The full temporal command also appears in `evidence/temporal_tests_analysis_run.txt`. To update saved unit-test evidence before regenerating the report, redirect a successful unittest run to `evidence/all_tests.log`; the report checks for `OK`.
 
-`inventory.py` can re-enumerate the collection, but its original output is a historical snapshot. `prepare_probe.py` documents the exact original-probe metadata diff/build/fixture commands. It was executed once and intentionally refuses to reuse its calibration directory; `libdecision.so`, source and build evidence are already delivered. The fixture checks exact returned command/header, exception forwarding and original-call count. It does not measure full runtime perturbation.
+`inventory.py` can re-enumerate external inputs. The original one-off probe authoring script was removed from this public archive; `decision_probe.cpp` and the C++ fixture sources remain. The fixture checks returned command/header, exception forwarding and original-call count, not full runtime perturbation.
 
 ## Acquisition reproduction (starts Gazebo/Nav2)
 
@@ -58,8 +58,8 @@ On a free ROS domain, with no other test sharing the same domain/Gazebo port:
 
 ```bash
 source /opt/ros/humble/setup.bash
-source /home/user/ros2_ws/install/setup.bash
-cd /home/user/ros2_ws/src/my_dwa_controller/benchmark/baseline_diagnosis_20261021
+source ${MYDWA_WS}/install/setup.bash
+cd ${REPO_ROOT}/benchmark/baseline_diagnosis_20261021
 python3 -B run_missing.py \
   --cases S04 S05 D01_t3 D01_t5 D01_t6 D02 \
   --tag replay_001 --domain 93

@@ -7,7 +7,7 @@
 从 WSL Ubuntu 干净终端执行（当前 WSLg 已验证）：
 
 ```bash
-cd /home/user/ros2_ws/src/my_dwa_controller
+cd ${REPO_ROOT}
 bash benchmark/dynamic/diagnostics/run_once.sh --scenario D01 --controller mydwa --gui
 ```
 
@@ -34,7 +34,7 @@ WSLg环境需要DISPLAY和可用图形设备。当前无需强制软件渲染；
 系统已有Python3、matplotlib；不用启动ROS/Gazebo：
 
 ```bash
-cd /home/user/ros2_ws/src/my_dwa_controller
+cd ${REPO_ROOT}
 python3 benchmark/dynamic/diagnostics/analyze.py
 python3 benchmark/dynamic/diagnostics/make_report.py
 ```
@@ -56,10 +56,10 @@ python3 benchmark/dynamic/diagnostics/make_report.py
 需要另行测量时，仅编译外部观察器；不重建/优化原插件：
 
 ```bash
-cd /home/user/ros2_ws/src/my_dwa_controller
+cd ${REPO_ROOT}
 bash benchmark/dynamic/diagnostics/build_probe.sh
 source /opt/ros/humble/setup.bash
-source /home/user/ros2_ws/install/setup.bash
+source ${MYDWA_WS}/install/setup.bash
 python3 benchmark/dynamic/diagnostics/evidence/test_probe.py
 bash benchmark/dynamic/diagnostics/run_once.sh --scenario D01 --controller mydwa --headless --run-id perf_mydwa_new --preload "$PWD/benchmark/dynamic/diagnostics/perf_build/libnavperf.so"
 python3 benchmark/dynamic/diagnostics/read_perf.py benchmark/dynamic/diagnostics/runs/perf_mydwa_new
@@ -76,11 +76,11 @@ python3 benchmark/dynamic/diagnostics/read_perf.py benchmark/dynamic/diagnostics
 ## 验证及原入口兼容性
 
 ```bash
-cd /home/user/ros2_ws/src/my_dwa_controller
+cd ${REPO_ROOT}
 source /opt/ros/humble/setup.bash
-source /home/user/ros2_ws/install/setup.bash
+source ${MYDWA_WS}/install/setup.bash
 python3 -m unittest discover -s benchmark -p 'test_*.py' -v
-ctest --test-dir /home/user/ros2_ws/build/my_dwa_controller -R '^test_' --output-on-failure
+ctest --test-dir ${MYDWA_WS}/build/my_dwa_controller -R '^test_' --output-on-failure
 python3 -m compileall -q benchmark/dynamic/diagnostics
 bash -n benchmark/dynamic/diagnostics/{run_once,launch_scene,build_probe}.sh
 python3 benchmark/dynamic/diagnostics/evidence/audit.py

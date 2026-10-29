@@ -1,6 +1,6 @@
 离线回归使用第三轮 D01 2s 的原始录制，原 bag 保持只读。
 
-在 WSL Ubuntu-22.04 中执行（工作目录 `/home/user/ros2_ws/src/my_dwa_controller`）：
+在 WSL Ubuntu-22.04 中执行（工作目录 `${REPO_ROOT}`）：
 
 ```bash
 source /opt/ros/humble/setup.bash
@@ -8,16 +8,16 @@ export PYTHONDONTWRITEBYTECODE=1
 # 以下三个命令重新生成新实验目录内的派生文件，不发布 ROS 数据。
 python3 benchmark/scan_emergency_20261022/diagnose.py
 python3 benchmark/scan_emergency_20261022/export_replay.py
-cd /home/user/ros2_ws
+cd ${MYDWA_WS}
 colcon --log-base log_scan_emergency build --packages-select my_dwa_controller \
   --build-base build_scan_emergency --install-base install_scan_emergency
 source install_scan_emergency/setup.bash
 cd src/my_dwa_controller
-/home/user/ros2_ws/build_scan_emergency/my_dwa_controller/replay_scan_emergency \
+${MYDWA_WS}/build_scan_emergency/my_dwa_controller/replay_scan_emergency \
   benchmark/scan_emergency_20261022/prior_replay.input \
   benchmark/scan_emergency_20261022/replay_final
 python3 benchmark/scan_emergency_20261022/test_offline.py
-cd /home/user/ros2_ws/build_scan_emergency/my_dwa_controller
+cd ${MYDWA_WS}/build_scan_emergency/my_dwa_controller
 ctest -R '^test_' --output-on-failure
 ctest --output-on-failure
 ```

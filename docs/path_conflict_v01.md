@@ -51,7 +51,7 @@ path_conflict:
 
 修改节点参数后需要重新 cleanup/configure，单纯 `ros2 param set` 不会更新本模块。
 回滚为 `enabled: false` 并重新配置；现有 YAML 缺省即关闭。原工作区安装目录未覆盖，
-本轮独立前缀为 `/home/user/ros2_ws/install_path_conflict_v01/my_dwa_controller`。
+本轮独立前缀为 `${MYDWA_WS}/install_path_conflict_v01/my_dwa_controller`。
 
 ## 检测与状态转换
 
@@ -120,7 +120,7 @@ S04/S05首轮均成功，无风险限速/等待；它们对应覆盖修正前版
 8次小规模Gazebo运行中，修改版D01 2s及两次4s仍碰撞，6s/S04/S05成功；S04也进入过
 Fallback，不能称为静态零触发。2s日志证实有不加速可行候选时抑制了更快候选的选择，
 但没有避撞改善证据。完整记录见 `benchmark/fallback_acceleration_20261022/REPORT.md`。
-新版本独立安装前缀为 `/home/user/ros2_ws/install_fallback_acceleration/my_dwa_controller`；
+新版本独立安装前缀为 `${MYDWA_WS}/install_fallback_acceleration/my_dwa_controller`；
 默认仍关闭，原Path Conflict安装前缀和所有旧结果保留。
 
 已知限制：

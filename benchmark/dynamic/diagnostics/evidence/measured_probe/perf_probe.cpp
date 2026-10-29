@@ -104,7 +104,7 @@ Command measure(Compute function, unsigned controller, void * self,
 }
 extern "C" Command my_compute(void *, const Pose &, const Twist &, void *) asm("_ZN17my_dwa_controller15MyDWAController23computeVelocityCommandsERKN13geometry_msgs3msg12PoseStamped_ISaIvEEERKNS2_6Twist_IS4_EEPN9nav2_core11GoalCheckerE");
 extern "C" Command my_compute(void * self, const Pose & pose, const Twist & velocity, void * checker) {
-  static Compute function = reinterpret_cast<Compute>(original("NAVPERF_MYDWA_LIB", "/home/user/ros2_ws/install/my_dwa_controller/lib/libmy_dwa_controller.so", MY));
+  static Compute function = reinterpret_cast<Compute>(original("NAVPERF_MYDWA_LIB", "libmy_dwa_controller.so", MY));
   return measure(function, 1, self, pose, velocity, checker);
 }
 extern "C" Command dw_compute(void *, const Pose &, const Twist &, void *) asm("_ZN8dwb_core15DWBLocalPlanner23computeVelocityCommandsERKN13geometry_msgs3msg12PoseStamped_ISaIvEEERKNS2_6Twist_IS4_EEPN9nav2_core11GoalCheckerE");
@@ -116,7 +116,7 @@ using Report = void (*)(void *, const rclcpp::Logger &, const my_dwa_controller:
 extern "C" void report(void *, const rclcpp::Logger &, const my_dwa_controller::CycleDiagnostics &, const char *, bool) asm("_ZN17my_dwa_controller21ControllerDiagnostics6reportERKN6rclcpp6LoggerERKNS_16CycleDiagnosticsEPKcb");
 extern "C" void report(void * self, const rclcpp::Logger & logger,
   const my_dwa_controller::CycleDiagnostics & cycle, const char * error, bool failed) {
-  static Report function = reinterpret_cast<Report>(original("NAVPERF_MYDWA_LIB", "/home/user/ros2_ws/install/my_dwa_controller/lib/libmy_dwa_controller.so", REPORT));
+  static Report function = reinterpret_cast<Report>(original("NAVPERF_MYDWA_LIB", "libmy_dwa_controller.so", REPORT));
   if (current) {
     const double stages[] = {double(steady_ns() - current->start_ns) * 1e-6,
       cycle.state_wait_ms, cycle.path_ms, cycle.map_wait_ms, cycle.predict_ms,

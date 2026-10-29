@@ -24,8 +24,8 @@
 
 ```bash
 source /opt/ros/humble/setup.bash
-source /home/user/ros2_ws/install/setup.bash
-cd /home/user/ros2_ws
+source ${MYDWA_WS}/install/setup.bash
+cd ${MYDWA_WS}
 colcon build --packages-select my_dwa_controller --symlink-install
 ROS_DOMAIN_ID=97 colcon test --packages-select my_dwa_controller --event-handlers console_direct+
 colcon test-result --test-result-base build/my_dwa_controller/test_results --verbose
@@ -42,7 +42,7 @@ colcon test-result --test-result-base build/my_dwa_controller/test_results --ver
 重跑时必须换一个不存在的 run-id（原 runner 会拒绝覆盖），例如：
 
 ```bash
-cd /home/user/ros2_ws/src/my_dwa_controller/benchmark
+cd ${REPO_ROOT}/benchmark
 python3 run_suite.py --controllers mydwa --scenes S04 --repeats 1 --run-id v1_1_replay_S04_001
 python3 v1_1/evidence/check_s04.py results/v1/v1_1_replay_S04_001
 # 逐次重复 S04，检查 5 次均没有停滞/恢复，再继续：

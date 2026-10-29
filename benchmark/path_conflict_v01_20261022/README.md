@@ -33,7 +33,7 @@ Inner停车前缀。按几何条件修正，并新增未知区间/边界回归�
 闭环后又修正了折返路径的最早相交安全边界，仅做单元/功能回归，未再跑Gazebo。
 因此上表及耗时不代表最终源码的同版本闭环验证；差异仅在monitor.cpp，见verification.json。
 
-![修正版风险与速度响应](//wsl.localhost/Ubuntu-22.04/home/user/ros2_ws/src/my_dwa_controller/benchmark/path_conflict_v01_20261022/risk_response.png)
+![修正版风险与速度响应](risk_response.png)
 
 ## 构建、测试与复现
 
@@ -41,7 +41,7 @@ Inner停车前缀。按几何条件修正，并新增未知区间/边界回归�
 
 ```bash
 source /opt/ros/humble/setup.bash
-cd /home/user/ros2_ws
+cd ${MYDWA_WS}
 colcon --log-base log_path_conflict_v01 build \
   --build-base build_path_conflict_v01 --install-base install_path_conflict_v01 \
   --packages-select my_dwa_controller \
@@ -61,9 +61,9 @@ ctest --output-on-failure
 
 ```bash
 source /opt/ros/humble/setup.bash
-source /home/user/ros2_ws/install/setup.bash
-source /home/user/ros2_ws/install_path_conflict_v01/my_dwa_controller/share/my_dwa_controller/local_setup.bash
-cd /home/user/ros2_ws/src/my_dwa_controller
+source ${MYDWA_WS}/install/setup.bash
+source ${MYDWA_WS}/install_path_conflict_v01/my_dwa_controller/share/my_dwa_controller/local_setup.bash
+cd ${REPO_ROOT}
 python3 -B benchmark/path_conflict_v01_20261022/run_smoke.py \
   --cases D01_t2 D01_t4 D01_t6 S04 S05 --tag smoke --domain 96
 python3 -B benchmark/path_conflict_v01_20261022/run_smoke.py \

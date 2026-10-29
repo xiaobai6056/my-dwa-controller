@@ -185,8 +185,8 @@ V1 没有二进制哈希，不能宣称逐位相同；8 个原 C++ 源文件、�
 
 ```bash
 source /opt/ros/humble/setup.bash
-source /home/user/ros2_ws/install/setup.bash
-cd /home/user/ros2_ws/src/my_dwa_controller/benchmark
+source ${MYDWA_WS}/install/setup.bash
+cd ${REPO_ROOT}/benchmark
 
 # 原始参数与冻结副本必须一致；不同则停止并另行设计配置注入，不能覆盖历史 YAML。
 cmp ../config/nav2_params.yaml tuning_r1/configs/mydwa_static_v1_original.yaml
@@ -202,7 +202,7 @@ python3 tuning_r1/analyze.py results/v1/static_v1_20261019 \
   --output tuning_r1/evidence/v1
 python3 tuning_r1/analyze.py results/v1/tuning_r1_diagnostic_baseline_20261019 \
   --output tuning_r1/evidence/diagnostic
-python3 tuning_r1/freeze.py
+# Original one-off freezing utility is omitted from the public archive.
 
 # 使用已有已构建测试的编译/链接参数，加载原插件作人工状态机制复现：
 bash tuning_r1/run_probe.sh
@@ -213,7 +213,7 @@ cat tuning_r1/freeze.log
 python3 -m json.tool tuning_r1/evidence/diagnostic/analysis.json
 ```
 
-归档副本发生内容冲突时 `freeze.py` 拒绝覆盖；未来新算法/参数应建立新版本目录。
+历史冻结副本由仓库外备份保存；未来新算法/参数应建立新版本目录。
 后续必须先在单独任务中处理终点锁存与 GoalChecker/定位修正组合，再用相同到达
 标准复测 S04、S06 及六场景。本轮没有证明更安全，没有可靠碰撞/最小净间距指标，
 也没有把“历史可复现”误标为“适合直接进入动态障碍性能验收”。

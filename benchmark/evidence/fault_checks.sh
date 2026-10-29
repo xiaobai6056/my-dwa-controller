@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 # Run after a fresh headless MyDWA launch. Explicitly resumes Gazebo on exit.
+
+# Baseline helper scripts/install prefixes live outside this archive.
+export MYDWA_WS=${MYDWA_WS:-"$HOME/ros2_ws"}
+REPO_ROOT=$(git -C "$(dirname -- "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)
 set -eo pipefail
 source /opt/ros/humble/setup.bash
-source /home/user/ros2_ws/install/setup.bash
-bench=/home/user/ros2_ws/src/my_dwa_controller/benchmark
+source "${MYDWA_WS}/install/setup.bash"
+bench="${REPO_ROOT}/benchmark"
 suffix=${1:-001}
 python3 "$bench/run_trial.py" --trial-id "timeout_$suffix" --timeout 0.4 \
   > "$bench/evidence/timeout_$suffix.log" 2>&1 || test "$?" -eq 2

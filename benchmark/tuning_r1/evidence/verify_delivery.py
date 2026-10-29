@@ -4,7 +4,13 @@ import hashlib
 import importlib.util
 import json
 from pathlib import Path
+import os
+
 import xml.etree.ElementTree as ET
+
+
+# External workspace install/build prefixes and baseline scripts are not bundled.
+ARCHIVE_WS = Path(os.environ.get("MYDWA_WS", str(Path.home() / "ros2_ws")))
 
 here = Path(__file__).resolve().parents[1]
 bench = here.parent
@@ -43,13 +49,13 @@ for trial in manifest['trials']:
                      'max_feedback_recoveries': summary['max_feedback_recoveries']})
 probe = ET.parse(here / 'evidence/terminal_latch_probe.xml').getroot()
 assert probe.attrib['tests'] == '1' and probe.attrib['failures'] == '0'
-test_xml = max(Path('/home/user/ros2_ws/build/my_dwa_controller/Testing').glob('*/Test.xml'),
+test_xml = max((ARCHIVE_WS / 'build/my_dwa_controller/Testing').glob('*/Test.xml'),
                key=lambda path: path.stat().st_mtime)
 tests = ET.parse(test_xml).findall('.//Testing/Test')
 states = {t.findtext('Name'): t.get('Status') for t in tests}
 assert len(states) == 15 and states['uncrustify'] == 'failed'
 assert all(v == 'passed' for k, v in states.items() if k != 'uncrustify')
-helper = Path('/home/user/ros2_ws/scripts/_baseline_processes.py')
+helper = (ARCHIVE_WS / 'scripts/_baseline_processes.py')
 spec = importlib.util.spec_from_file_location('baseline_processes', helper)
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)

@@ -4,13 +4,17 @@ import importlib.util
 import json
 import math
 from pathlib import Path
+
 import sqlite3
 
 import numpy as np
 from rclpy.serialization import deserialize_message
 from rosidl_runtime_py.utilities import get_message
 
-ROOT = Path('/home/user/ros2_ws/src/my_dwa_controller')
+
+ARCHIVE_REPO = Path(__file__).resolve().parents[2]
+
+ROOT = ARCHIVE_REPO
 OLD = ROOT / 'benchmark/scan_trend_20261022'
 OUT = ROOT / 'benchmark/scan_emergency_20261022'
 spec = importlib.util.spec_from_file_location('prior', OLD / 'analyze.py')

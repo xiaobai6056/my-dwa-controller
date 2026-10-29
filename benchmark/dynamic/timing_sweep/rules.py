@@ -3,10 +3,16 @@ import copy
 import json
 import math
 from pathlib import Path
+import os
+
+
+# External workspace install/build prefixes and baseline scripts are not bundled.
+ARCHIVE_WS = Path(os.environ.get("MYDWA_WS", str(Path.home() / "ros2_ws")))
+
 HERE=Path(__file__).resolve().parent
 DYNAMIC=HERE.parent
 ROOT=HERE.parents[2]
-RELEASE=Path('/home/user/ros2_ws/install_compile_comparison_20261020/release')
+RELEASE=(ARCHIVE_WS / 'install_compile_comparison_20261020/release')
 
 def original_scene():
     return dict(json.loads((DYNAMIC/'scenarios.json').read_text())['D01'],id='D01')

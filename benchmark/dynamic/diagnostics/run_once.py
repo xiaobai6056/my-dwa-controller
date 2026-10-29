@@ -6,10 +6,15 @@ import hashlib
 import json
 import os
 from pathlib import Path
+
 import signal
 import subprocess
 import sys
 import time
+
+
+# External workspace install/build prefixes and baseline scripts are not bundled.
+ARCHIVE_WS = Path(os.environ.get("MYDWA_WS", str(Path.home() / "ros2_ws")))
 
 HERE = Path(__file__).resolve().parent
 DYNAMIC = HERE.parent
@@ -64,7 +69,7 @@ def main():
     manifest = dict(arguments=vars(args) | {'preload': str(args.preload) if args.preload else None},
         classification='current_workspace_diagnostic_not_v0.1', launch_command=command,
         runner_command=runner_command, domain=args.domain, gazebo_master_uri=env['GAZEBO_MASTER_URI'],
-        current_plugin_sha256=hashlib.sha256(Path('/home/user/ros2_ws/install/my_dwa_controller/lib/libmy_dwa_controller.so').read_bytes()).hexdigest())
+        current_plugin_sha256=hashlib.sha256((ARCHIVE_WS / 'install/my_dwa_controller/lib/libmy_dwa_controller.so').read_bytes()).hexdigest())
     if args.preload:
         manifest['preload_sha256'] = hashlib.sha256(args.preload.resolve().read_bytes()).hexdigest()
         manifest['probe_source_sha256'] = hashlib.sha256((HERE/'perf_probe.cpp').read_bytes()).hexdigest()

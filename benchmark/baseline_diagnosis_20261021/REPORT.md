@@ -84,7 +84,7 @@ raw Costmap的metadata.update_time为0，header是发布时刻，均不能恢复
 
 ## 交付与复现
 
-- `README.md`：命令、数据定义和原始/重建字段界限。`PLAN.md`：已批准范围与执行记录。
+- `README.md`：命令、数据定义和原始/重建字段界限。历史过程计划不属于本公开归档。
 - `outputs/score_summary.json`、`score_cycles.jsonl.gz`、`all_candidates.csv.gz`、`key_candidates.csv`、`critical_decisions.json`：全部原始评分贡献、选择标记、离线mean/max/Top-K/不同格数及核验。
 - `outputs/maps_details.json`、`maps_pairs.csv`、`maps_key_availability.csv`、`maps_findings.md`：逐对格心变化、坐标、时间支持、误报及可用性。`outputs/bag_summary.json`：源stamp/TF/GT限制。
 - `runs/*`：6份新bag、原始probe JSONL、原runner输出与场景/config/命令、加载库映射。旧输入留在原处，`outputs/inventory.json`与初始5252文件散列提供路径和版本证据。

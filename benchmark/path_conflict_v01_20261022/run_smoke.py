@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+
 import signal
 import subprocess
 import sys
@@ -13,10 +14,14 @@ import time
 
 import yaml
 
+
+# External workspace install/build prefixes and baseline scripts are not bundled.
+ARCHIVE_WS = Path(os.environ.get("MYDWA_WS", str(Path.home() / "ros2_ws")))
+
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 BASELINE = ROOT / 'benchmark/baseline_diagnosis_20261021'
-PREFIX = Path('/home/user/ros2_ws/install_path_conflict_v01/my_dwa_controller')
+PREFIX = (ARCHIVE_WS / 'install_path_conflict_v01/my_dwa_controller')
 PLUGIN = PREFIX / 'lib/libmy_dwa_controller.so'
 sys.path.insert(0, str(BASELINE))
 import run_missing  # noqa: E402

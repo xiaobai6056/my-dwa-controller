@@ -9,15 +9,21 @@ import hashlib
 import json
 import os
 from pathlib import Path
+
 import signal
+import shlex
 import subprocess
 import sys
 import time
 
+
+# External workspace install/build prefixes and baseline scripts are not bundled.
+ARCHIVE_WS = Path(os.environ.get("MYDWA_WS", str(Path.home() / "ros2_ws")))
+
 HERE=Path(__file__).resolve().parent
 BENCH=HERE.parent
 DYNAMIC=BENCH/'dynamic'
-PREFIX=Path('/home/user/ros2_ws/install_compile_comparison_20261020/release')
+PREFIX=(ARCHIVE_WS / 'install_compile_comparison_20261020/release')
 PLUGIN=PREFIX/'lib/libmy_dwa_controller.so'
 sys.path.insert(0,str(BENCH))
 from run_suite import stop_process
@@ -42,7 +48,7 @@ def commands(case, output):
     if scene_id.startswith('S'):
         scene=load_scene(scene_id)
         source=(BENCH/'start_scene.sh').read_text()
-        needle='source /home/user/ros2_ws/install/setup.bash\n'
+        needle='source "${MYDWA_WS}/install/setup.bash"\n'
         assert source.count(needle)==1
         source=source.replace(needle,needle+f'source {PREFIX}/share/my_dwa_controller/local_setup.bash\n')
         runner=[sys.executable,str(BENCH/'run_trial.py'),'--controller','mydwa',
@@ -61,6 +67,9 @@ def commands(case, output):
             scene=dict(json.loads((DYNAMIC/'scenarios.json').read_text())[scene_id],id=scene_id)
             runner=[sys.executable,str(DYNAMIC/'run_trial.py'),'--scene',scene_id,
                     '--controller','mydwa','--output',str(output/'trial')]
+    source = source.replace(
+        'REPO_ROOT=$(git -C "$(dirname -- "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)',
+        'REPO_ROOT=' + shlex.quote(str(BENCH.parent)))
     resolved=output/'resolved_launch.sh';resolved.write_text(source)
     return scene,['bash',str(resolved),'mydwa',scene_id,'headless'],runner
 

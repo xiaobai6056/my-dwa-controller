@@ -5,7 +5,7 @@
 ## 从干净 WSL 终端复现
 
 ```bash
-cd /home/user/ros2_ws
+cd ${MYDWA_WS}
 source /opt/ros/humble/setup.bash
 colcon build --packages-select my_dwa_controller --cmake-args -DBUILD_TESTING=ON
 source install/setup.bash
@@ -20,7 +20,7 @@ python3 benchmark/dynamic/run_suite.py --aggregate benchmark/results/dynamic/for
 # Python/启动器回归、语法检查
 bash benchmark/dynamic/evidence/checks.sh
 # 完整包检查（现存 C++ uncrustify 失败单独见 RESULTS.md）
-cd /home/user/ros2_ws
+cd ${MYDWA_WS}
 colcon test --packages-select my_dwa_controller --event-handlers console_direct+
 colcon test-result --test-result-base build/my_dwa_controller --verbose
 ```

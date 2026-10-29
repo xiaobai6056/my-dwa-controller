@@ -7,14 +7,20 @@ import io
 import json
 import math
 from pathlib import Path
+import os
+
 import re
 import shlex
 import subprocess
 
+
+# External workspace install/build prefixes and baseline scripts are not bundled.
+ARCHIVE_WS = Path(os.environ.get("MYDWA_WS", str(Path.home() / "ros2_ws")))
+
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 OLD = ROOT / 'benchmark/path_conflict_v01_20261022'
-BUILD = Path('/home/user/ros2_ws/build_path_conflict_v01/my_dwa_controller')
+BUILD = (ARCHIVE_WS / 'build_path_conflict_v01/my_dwa_controller')
 CASES = ['prefix_fix_D01_t2', 'prefix_fix_D01_t4']
 
 

@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
 # Fresh simulation for one scenario. Existing baseline/UI entry points stay intact.
+
+# Baseline helper scripts/install prefixes live outside this archive.
+export MYDWA_WS=${MYDWA_WS:-"$HOME/ros2_ws"}
+REPO_ROOT=$(git -C "$(dirname -- "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)
 set -eo pipefail
 source /opt/ros/humble/setup.bash
-source /home/user/ros2_ws/install/setup.bash
-source /home/user/ros2_ws/scripts/_baseline_common.sh
-bench=/home/user/ros2_ws/src/my_dwa_controller/benchmark
+source "${MYDWA_WS}/install/setup.bash"
+source "${MYDWA_WS}/scripts/_baseline_common.sh"
+bench="${REPO_ROOT}/benchmark"
 case "${1:-}" in
   mydwa) params_file="$bench/../config/nav2_params.yaml" ;;
   dwb) params_file="$bench/../config/nav2_params_dwb.yaml" ;;

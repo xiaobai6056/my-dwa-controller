@@ -1,6 +1,6 @@
 已完成本次定向修复，并仅新增两次 Gazebo 闭环：S05 一次、D01 2s 一次，均到达目标；D01 无接触、已解除原先无法恢复的风险。未增加 D01 4s。本结果只支持当前单个横穿方柱条件，不能宣称动态避障已经普遍解决。
 
-时间均为导航派发后的仿真秒，原始 ROS 时间可通过每轮 summary 的 navigation_start_sim_s 换算。源码与日志以 WSL `/home/user/ros2_ws/src/my_dwa_controller` 为准，本目录是独立交付副本。
+时间均为导航派发后的仿真秒，原始 ROS 时间可通过每轮 summary 的 navigation_start_sim_s 换算。源码与日志以 WSL `${REPO_ROOT}` 为准，本目录是独立交付副本。
 
 **根因证据与修正对应关系**
 
@@ -79,7 +79,7 @@ Git HEAD 为 `1bad3b66aa64384d5955f1933dcfb5c1017dcd62`，工作树保留未提�
 
 插件 SHA256：`1bb5e6eeb912c9c5edb174c3d4602f69e1755563577bbd049371555ffabcb967`。
 
-构建前缀 `/home/user/ros2_ws/build_scan_emergency`，安装前缀 `/home/user/ros2_ws/install_scan_emergency/my_dwa_controller`，日志前缀 `log_scan_emergency`。旧 install_scan_trend 插件 hash 仍为 `af3ea574…183605`（完整值在 manifest）。开始时 7055 个文件中仅 11 个预期源码/构建/测试文件修改；7008 个旧 Benchmark/配置文件 hash 无变化，无删除或覆盖原结果。
+构建前缀 `${MYDWA_WS}/build_scan_emergency`，安装前缀 `${MYDWA_WS}/install_scan_emergency/my_dwa_controller`，日志前缀 `log_scan_emergency`。旧 install_scan_trend 插件 hash 仍为 `af3ea574…183605`（完整值在 manifest）。开始时 7055 个文件中仅 11 个预期源码/构建/测试文件修改；7008 个旧 Benchmark/配置文件 hash 无变化，无删除或覆盖原结果。
 
 `sources_before.zip` / `sources_final.zip` / `incremental.patch` 提供源版本关系；两轮插件和 sources.zip 分别归档，`final_manifest.json` 可逐项验证。完整日志、bag、参数、结果与源码增量都在本目录，原正式场景及旧归档不在修改范围。
 

@@ -1,10 +1,16 @@
 """Reuse the existing test target's compile/link flags without modifying its sources."""
 from pathlib import Path
+import os
+
 import shlex
 import subprocess
 
+
+# External workspace install/build prefixes and baseline scripts are not bundled.
+ARCHIVE_WS = Path(os.environ.get("MYDWA_WS", str(Path.home() / "ros2_ws")))
+
 here = Path(__file__).resolve().parent
-build = Path('/home/user/ros2_ws/build/my_dwa_controller')
+build = (ARCHIVE_WS / 'build/my_dwa_controller')
 flags = dict(line.split(' = ', 1) for line in
              (build / 'CMakeFiles/test_controller.dir/flags.make').read_text().splitlines()
              if line.startswith('CXX_') and ' = ' in line)

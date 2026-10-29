@@ -1,7 +1,12 @@
 """Explicit independent install selection and strict live mapping verification."""
 from pathlib import Path
+import os
 
-WS=Path('/home/user/ros2_ws')
+
+# External workspace install/build prefixes and baseline scripts are not bundled.
+ARCHIVE_WS = Path(os.environ.get("MYDWA_WS", str(Path.home() / "ros2_ws")))
+
+WS=ARCHIVE_WS
 
 def selection(variant):
     if variant not in ('unoptimized','release'):

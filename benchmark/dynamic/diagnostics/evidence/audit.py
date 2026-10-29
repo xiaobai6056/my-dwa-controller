@@ -2,6 +2,11 @@
 import hashlib
 import json
 from pathlib import Path
+import os
+
+
+# External workspace install/build prefixes and baseline scripts are not bundled.
+ARCHIVE_WS = Path(os.environ.get("MYDWA_WS", str(Path.home() / "ros2_ws")))
 
 HERE=Path(__file__).resolve().parents[1]
 ROOT=HERE.parents[2]
@@ -37,6 +42,6 @@ for run in sorted((HERE/'runs').iterdir()):
 result=dict(initial_files=len(initial),unchanged_existing_files=len(initial)-1,
     excluded_new_test_move=moved,changed_existing_files=changed,
     offline_source_hashes_and_earliest_contact_checks=6,runs=checks,
-    plugin_sha256=sha(Path('/home/user/ros2_ws/install/my_dwa_controller/lib/libmy_dwa_controller.so')))
+    plugin_sha256=sha((ARCHIVE_WS / 'install/my_dwa_controller/lib/libmy_dwa_controller.so')))
 (HERE/'evidence/integrity_audit.json').write_text(json.dumps(result,indent=2)+'\n')
 print(json.dumps(result,indent=2))

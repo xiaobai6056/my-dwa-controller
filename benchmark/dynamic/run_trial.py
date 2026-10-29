@@ -6,10 +6,16 @@ import hashlib
 import json
 import math
 from pathlib import Path
+import os
+
 import signal
 import sys
 import threading
 import time
+
+
+# External workspace install/build prefixes and baseline scripts are not bundled.
+ARCHIVE_WS = Path(os.environ.get("MYDWA_WS", str(Path.home() / "ros2_ws")))
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
@@ -107,7 +113,7 @@ def main():
                     HERE.glob('*.py')) + [HERE / 'scenarios.json']:
                 baseline.save_config(source, output, 'dynamic', summary)
             plugin = Path(
-                '/home/user/ros2_ws/install/my_dwa_controller/lib/libmy_dwa_controller.so')
+                str(ARCHIVE_WS / 'install/my_dwa_controller/lib/libmy_dwa_controller.so'))
             summary['mydwa_library_sha256'] = hashlib.sha256(
                 plugin.read_bytes()).hexdigest()
             goal = PoseStamped()

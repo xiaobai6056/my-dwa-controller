@@ -154,7 +154,7 @@ available不足转Fallback、硬上限保留0.185m/s。首次低于0.25的cmd_ve
 
 ```
 source /opt/ros/humble/setup.bash
-cd /home/user/ros2_ws
+cd ${MYDWA_WS}
 colcon --log-base log_scan_trend build --build-base build_scan_trend \
   --install-base install_scan_trend --packages-select my_dwa_controller \
   --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON

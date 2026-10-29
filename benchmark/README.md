@@ -15,15 +15,15 @@
 
 ```bash
 source /opt/ros/humble/setup.bash
-cd /home/user/ros2_ws
+cd ${MYDWA_WS}
 colcon build --packages-select my_dwa_controller
-source /home/user/ros2_ws/install/setup.bash
+source ${MYDWA_WS}/install/setup.bash
 ```
 
 终端 A：
 
 ```bash
-bash /home/user/ros2_ws/scripts/start_headless_baseline.sh mydwa
+bash ${MYDWA_WS}/scripts/start_headless_baseline.sh mydwa
 ```
 
 这会保留 gzserver、机器人、传感器、TF、AMCL、costmap、Nav2 和 `/clock`，
@@ -39,8 +39,8 @@ bash /home/user/ros2_ws/scripts/start_headless_baseline.sh mydwa
 
 ```bash
 source /opt/ros/humble/setup.bash
-source /home/user/ros2_ws/install/setup.bash
-cd /home/user/ros2_ws/src/my_dwa_controller
+source ${MYDWA_WS}/install/setup.bash
+cd ${REPO_ROOT}
 python3 benchmark/run_trial.py \
   --controller mydwa --start -2 -0.5 0 --goal -1 -0.5 0 --timeout 90
 ```
@@ -53,7 +53,7 @@ python3 benchmark/run_trial.py \
 使用官方 DWB 时先重启终端 A：
 
 ```bash
-bash /home/user/ros2_ws/scripts/start_headless_baseline.sh dwb
+bash ${MYDWA_WS}/scripts/start_headless_baseline.sh dwb
 ```
 
 然后终端 B：
@@ -70,7 +70,7 @@ Nav2**。必须先使用正确参数启动，再运行测试。两个终端要�
 如需保留 UI 流程，仍使用原命令：
 
 ```bash
-bash /home/user/ros2_ws/scripts/start_ui_baseline.sh
+bash ${MYDWA_WS}/scripts/start_ui_baseline.sh
 ```
 
 UI 脚本未修改，仍使用 MyDWA 参数。交付时本次启动的仿真已停止。
@@ -153,7 +153,7 @@ Nav2 当前 XY 成功容差为 0.25 m，因此约 0.24 m 的误差仍可得到�
 ## 查看结果
 
 ```bash
-cd /home/user/ros2_ws/src/my_dwa_controller
+cd ${REPO_ROOT}
 python3 -m json.tool benchmark/results/mydwa_006/summary.json
 head -n 6 benchmark/results/mydwa_006/trajectory.csv
 tail -n 3 benchmark/results/mydwa_006/trajectory.csv
@@ -185,20 +185,20 @@ MyDWA 验收中 35 行位姿/实测速度全部有效，33 行 Controller 指令
 
 ```bash
 source /opt/ros/humble/setup.bash
-source /home/user/ros2_ws/install/setup.bash
-cd /home/user/ros2_ws
+source ${MYDWA_WS}/install/setup.bash
+cd ${MYDWA_WS}
 colcon build --packages-select my_dwa_controller
 # 避免测试用 controller_server 名称与正在运行的仿真冲突：
 ROS_DOMAIN_ID=97 colcon test --packages-select my_dwa_controller
 colcon test-result --test-result-base build/my_dwa_controller --verbose
 python3 -m unittest discover -s scripts/tests -v
-cd /home/user/ros2_ws/src/my_dwa_controller/benchmark
+cd ${REPO_ROOT}/benchmark
 python3 -m unittest -v test_run_trial
 # 在全新 MyDWA baseline 上运行；002 已存在，再执行应换唯一后缀：
 bash evidence/fault_checks.sh 002
 sha256sum -c evidence/unchanged.sha256
-bash -n /home/user/ros2_ws/scripts/start_headless_baseline.sh
-bash -n /home/user/ros2_ws/scripts/start_ui_baseline.sh
+bash -n ${MYDWA_WS}/scripts/start_headless_baseline.sh
+bash -n ${MYDWA_WS}/scripts/start_ui_baseline.sh
 ```
 
 构建通过；8 组 C++ 功能测试、12 项 benchmark Python 测试、5 项原有启动清理

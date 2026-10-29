@@ -6,14 +6,14 @@
 
 使用原D01地图、物理模型、机器人起点[0,0,0]、目标[4,0,0]、盒尺寸0.5×0.5×0.7m、x=1.6m、y=-1.1→1.1m、速度0.25m/s、90秒任务超时。原4s关键帧原样，其他时机只平移运动帧时间，运动段仍8.8秒。rules.scene(4)测试为与原D01完整字典相等。没有随机引入新的场景因素。
 
-本轮全部重新测试：2/3/4/5/6秒 × MyDWA/DWB ×3，共30次。旧正式MyDWA是未优化构建，之前Release实验不是本轮正式扫描，故不混用旧4秒记录。MyDWA统一使用独立Release安装 `/home/user/ros2_ws/install_compile_comparison_20261020/release`，实际-O3/-DNDEBUG；DWB使用既有官方系统包，两者分别使用原冻结YAML。
+本轮全部重新测试：2/3/4/5/6秒 × MyDWA/DWB ×3，共30次。旧正式MyDWA是未优化构建，之前Release实验不是本轮正式扫描，故不混用旧4秒记录。MyDWA统一使用独立Release安装 `${MYDWA_WS}/install_compile_comparison_20261020/release`，实际-O3/-DNDEBUG；DWB使用既有官方系统包，两者分别使用原冻结YAML。
 
 每轮使用Headless、domain91、Gazebo master11436，完整新进程/AMCL/任务/运动状态，结束清理并间隔2秒。重复1按2,3,4,5,6秒；重复2逆序；重复3按4,2,6,3,5秒，交替Controller先后顺序。完整顺序、UTC/负载/affinity在sequence_first.json。
 
 ## 从干净WSL终端复现
 
 ```bash
-cd /home/user/ros2_ws/src/my_dwa_controller
+cd ${REPO_ROOT}
 bash benchmark/dynamic/timing_sweep/run.sh --tag new_scan
 ```
 
@@ -21,7 +21,7 @@ bash benchmark/dynamic/timing_sweep/run.sh --tag new_scan
 
 ```bash
 source /opt/ros/humble/setup.bash
-source /home/user/ros2_ws/install/setup.bash
+source ${MYDWA_WS}/install/setup.bash
 python3 benchmark/dynamic/timing_sweep/run_one.py --scenario D01 --controller mydwa --headless --start-time 3 --run-id single_t3_new
 ```
 

@@ -73,7 +73,7 @@ t4/t6的场景时序与t2不同，只作多条件诊断；没有将它们与不�
 
 **冻结、归档与复核**
 
-插件为 `/home/user/ros2_ws/install_scan_emergency/my_dwa_controller/lib/libmy_dwa_controller.so`，SHA256 `1bb5e6eeb912c9c5edb174c3d4602f69e1755563577bbd049371555ffabcb967`，与上一轮V2一致。没有重新构建。每轮唯一tag、独立params_enabled.yaml、sources.zip、插件副本、plugin_maps.txt、bag、collector JSONL、summary与launch/trial日志均齐全，运行时实际映射均核实，cleanup均为0。源码HEAD仍为 `1bad3b66aa64384d5955f1933dcfb5c1017dcd62`，未提交改动完整保留。
+插件为 `${MYDWA_WS}/install_scan_emergency/my_dwa_controller/lib/libmy_dwa_controller.so`，SHA256 `1bb5e6eeb912c9c5edb174c3d4602f69e1755563577bbd049371555ffabcb967`，与上一轮V2一致。没有重新构建。每轮唯一tag、独立params_enabled.yaml、sources.zip、插件副本、plugin_maps.txt、bag、collector JSONL、summary与launch/trial日志均齐全，运行时实际映射均核实，cleanup均为0。源码HEAD仍为 `1bad3b66aa64384d5955f1933dcfb5c1017dcd62`，未提交改动完整保留。
 
 本次开始时的 **7222 个已有文件SHA256全部未变**，包括业务、测试、正式场景和旧归档；仅增加当前独立诊断目录。新离线工具复用旧TF/bag导出与原评估几何，不建立Benchmark框架。四轮运动脚本均通过原 `rules.verify_motion`，真值首次明显移动均比配置启动晚约0.1s，在原接收时钟容差内。
 

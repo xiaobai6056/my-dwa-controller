@@ -8,6 +8,7 @@ import json
 import math
 import os
 from pathlib import Path
+
 import signal
 import statistics as stats
 import subprocess
@@ -16,6 +17,10 @@ import time
 
 from metrics import calculate
 from scenes import load_scene, resources
+
+
+# External workspace install/build prefixes and baseline scripts are not bundled.
+ARCHIVE_WS = Path(os.environ.get("MYDWA_WS", str(Path.home() / "ros2_ws")))
 
 HERE = Path(__file__).resolve().parent
 
@@ -227,7 +232,7 @@ def run_one(directory, trial, env):
             if launch is not None:
                 stop_process(launch)
             cleanup = subprocess.run(
-                [sys.executable, '/home/user/ros2_ws/scripts/_baseline_processes.py'],
+                [sys.executable, str(ARCHIVE_WS / 'scripts/_baseline_processes.py')],
                 env=env, stdout=launch_log, stderr=subprocess.STDOUT, timeout=15)
             trial['cleanup_returncode'] = cleanup.returncode
     summary_file = path / 'summary.json'

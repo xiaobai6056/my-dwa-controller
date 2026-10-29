@@ -6,7 +6,10 @@ import json
 import math
 from pathlib import Path
 
-ROOT = Path('/home/user/ros2_ws/src/my_dwa_controller')
+
+ARCHIVE_REPO = Path(__file__).resolve().parents[2]
+
+ROOT = ARCHIVE_REPO
 HERE = ROOT / 'benchmark/scan_emergency_20261022'
 spec = importlib.util.spec_from_file_location('diagnose', HERE / 'diagnose.py')
 diagnose = importlib.util.module_from_spec(spec)
