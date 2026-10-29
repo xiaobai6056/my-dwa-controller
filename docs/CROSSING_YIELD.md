@@ -73,7 +73,8 @@ Tags retained in the formal repository:
 - `pre-crossing-yield-formal-checkout-20261029`: previously checked-out formal
   version `c667a957eb15389ff0d0cf2bd91a518337af528c`.
 - `v2-crossing-yield-reserve020`: exact source candidate, including provenance history.
-- `main-crossing-yield-integration-20261029`: the new integration commit.
+- main-crossing-yield-integration-20261029: the source integration commit.
+- main-crossing-yield-integration-notes-20261029: the installation/rollback documentation follow-up.
 
 With a clean worktree, inspect either previous source without moving main:
 
@@ -87,11 +88,14 @@ To undo this integration on clean main while preserving history:
 
 ```bash
 git switch main
-git revert main-crossing-yield-integration-20261029
+git revert --no-commit main-crossing-yield-integration-notes-20261029 main-crossing-yield-integration-20261029
+git commit -m "Revert crossing yield main integration"
 ```
 
 Resolve any conflicts with subsequent work before continuing a revert. Do not
-force-reset or discard local changes. The formal installation is unchanged by
-this source integration. Retained Git bundles, build/test logs, hashes and the
+force-reset or discard local changes. No install command rewrites the formal plugin binary. The existing formal
+installation uses source symlinks: three headers and package.xml now expose the
+new checkout, while its plugin binary remains the old version. A later explicit
+deployment/rebuild must synchronize that installation; it is not done here. Retained Git bundles, build/test logs, hashes and the
 exact before/after record are stored outside the repository at
 `/home/user/ros2_experiments/main_crossing_yield_integration_20261029`.
