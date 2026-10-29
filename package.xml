@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>my_dwa_controller</name>
-  <version>0.0.0</version>
+  <version>1.0.0</version>
   <description>TODO: Package description</description>
   <maintainer email="haoxuan@todo.todo">haoxuan</maintainer>
   <license>TODO: License declaration</license>
@@ -14,6 +14,8 @@
   <depend>nav2_core</depend>
   <depend>pluginlib</depend>
   <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>eigen</depend>
   <depend>nav2_costmap_2d</depend>
   <depend>nav_msgs</depend>
   <depend>tf2</depend>
@@ -29,6 +31,10 @@
   <exec_depend>ament_index_python</exec_depend>
   <exec_depend>python3-yaml</exec_depend>
 
+  <!-- Optional frozen-input migration replay tool in test/migration. -->
+  <test_depend>rosbag2_cpp</test_depend>
+  <test_depend>tf2_msgs</test_depend>
+  <test_depend>nlohmann_json</test_depend>
   <test_depend>ament_cmake_gtest</test_depend>
   <test_depend>ament_cmake_cppcheck</test_depend>
   <test_depend>ament_lint_auto</test_depend>

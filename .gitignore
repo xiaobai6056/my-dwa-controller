@@ -23,3 +23,8 @@ __pycache__/
 # Editor
 .vscode/
 *.swp
+
+# Keep maintained C++ tests visible; generated test files stay ignored.
+!/test/
+/test/*
+!/test/*.cpp

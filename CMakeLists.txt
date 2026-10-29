@@ -17,6 +17,9 @@ find_package(tf2_ros REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(Eigen3 REQUIRED)
+ament_export_dependencies(Eigen3)
 
 
 # 轨迹预测独立库；启用 PIC，便于后续链接到 Controller 共享插件。
@@ -35,6 +38,15 @@ install(TARGETS trajectory_predictor
 )
 ament_export_targets(export_trajectory_predictor HAS_LIBRARY_TARGET)
 ament_export_dependencies(geometry_msgs)
+
+add_library(motion_predictor STATIC src/motion_predictor.cpp)
+set_target_properties(motion_predictor PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_compile_features(motion_predictor PUBLIC cxx_std_17)
+target_include_directories(motion_predictor PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>)
+ament_target_dependencies(motion_predictor geometry_msgs)
+install(TARGETS motion_predictor EXPORT export_motion_predictor ARCHIVE DESTINATION lib)
+ament_export_targets(export_motion_predictor HAS_LIBRARY_TARGET)
 
 # 无状态速度采样独立库，可单独使用，也可供后续共享插件调用。
 add_library(velocity_sampler STATIC src/velocity_sampler.cpp)
@@ -128,15 +140,61 @@ install(TARGETS path_handler
 ament_export_targets(export_path_handler HAS_LIBRARY_TARGET)
 ament_export_dependencies(nav_msgs tf2 tf2_ros tf2_geometry_msgs rclcpp)
 
+# Scan perception is independent of path scoring and velocity selection.
+add_library(scan_obstacle_tracker STATIC src/scan_obstacle_tracker.cpp src/surface_motion.cpp src/partial_surface/velocity.cpp)
+target_include_directories(scan_obstacle_tracker PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/partial_surface)
+target_link_libraries(scan_obstacle_tracker Eigen3::Eigen)
+set_target_properties(scan_obstacle_tracker PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_compile_features(scan_obstacle_tracker PUBLIC cxx_std_17)
+target_include_directories(scan_obstacle_tracker PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+ament_target_dependencies(scan_obstacle_tracker sensor_msgs rclcpp tf2_ros tf2 tf2_geometry_msgs)
+install(TARGETS scan_obstacle_tracker
+  EXPORT export_scan_obstacle_tracker ARCHIVE DESTINATION lib)
+ament_export_targets(export_scan_obstacle_tracker HAS_LIBRARY_TARGET)
+ament_export_dependencies(sensor_msgs)
+
+# Stateless assessment only; it is not called by the Controller command path.
+add_library(path_conflict_evaluator STATIC src/path_conflict_evaluator.cpp)
+set_target_properties(path_conflict_evaluator PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_compile_features(path_conflict_evaluator PUBLIC cxx_std_17)
+target_include_directories(path_conflict_evaluator PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+target_link_libraries(path_conflict_evaluator PUBLIC path_geometry scan_obstacle_tracker)
+install(TARGETS path_conflict_evaluator
+  EXPORT export_path_conflict_evaluator ARCHIVE DESTINATION lib)
+ament_export_targets(export_path_conflict_evaluator HAS_LIBRARY_TARGET)
+
+# Continuous candidate geometry, used by Controller only when Scan tracking is enabled.
+add_library(dynamic_trajectory_evaluator STATIC src/dynamic_trajectory_evaluator.cpp src/dynamic_risk_evaluator.cpp src/dynamic_filter.cpp)
+set_target_properties(dynamic_trajectory_evaluator PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_compile_features(dynamic_trajectory_evaluator PUBLIC cxx_std_17)
+target_include_directories(dynamic_trajectory_evaluator PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+target_link_libraries(dynamic_trajectory_evaluator PUBLIC
+  scan_obstacle_tracker geometry_msgs::geometry_msgs__rosidl_generator_cpp)
+install(TARGETS dynamic_trajectory_evaluator
+  EXPORT export_dynamic_trajectory_evaluator ARCHIVE DESTINATION lib)
+ament_export_targets(export_dynamic_trajectory_evaluator HAS_LIBRARY_TARGET)
+
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
-  ament_add_test(test_benchmark
-    COMMAND ${Python3_EXECUTABLE} -m unittest discover
-      -s ${CMAKE_CURRENT_SOURCE_DIR}/benchmark -p "test_*.py" -v
-    GENERATE_RESULT_FOR_RETURN_CODE_ZERO
-    TIMEOUT 20
-  )
+  # Benchmark data/code is archived separately and need not be present.
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/benchmark")
+    ament_add_test(test_benchmark
+      COMMAND ${Python3_EXECUTABLE} -m unittest discover
+        -s ${CMAKE_CURRENT_SOURCE_DIR}/benchmark -p "test_*.py" -v
+      GENERATE_RESULT_FOR_RETURN_CODE_ZERO
+      TIMEOUT 20
+    )
+  endif()
   ament_add_gtest(test_trajectory_predictor test/test_trajectory_predictor.cpp)
   target_link_libraries(test_trajectory_predictor trajectory_predictor)
 
@@ -154,6 +212,15 @@ if(BUILD_TESTING)
 
   ament_add_gtest(test_path_handler test/test_path_handler.cpp)
   target_link_libraries(test_path_handler path_handler)
+
+  ament_add_gtest(test_scan_obstacle_tracker test/test_scan_obstacle_tracker.cpp)
+  target_link_libraries(test_scan_obstacle_tracker scan_obstacle_tracker)
+
+  ament_add_gtest(test_path_conflict_evaluator test/test_path_conflict_evaluator.cpp)
+  target_link_libraries(test_path_conflict_evaluator path_conflict_evaluator)
+
+  ament_add_gtest(test_dynamic_trajectory_evaluator test/test_dynamic_trajectory_evaluator.cpp)
+  target_link_libraries(test_dynamic_trajectory_evaluator dynamic_trajectory_evaluator trajectory_predictor)
 
   # 使用 cppcheck 的 GTest 宏模型注册全包静态检查。
   # 仅替换自动注册，检查文件范围不变，避免重复执行同一项检查。
@@ -179,7 +246,7 @@ endif()
 
 add_library(${PROJECT_NAME} SHARED
   src/controller.cpp
-  src/controller_diagnostics.cpp
+  src/crossing_yield.cpp
 )
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 
@@ -201,7 +268,8 @@ ament_target_dependencies(${PROJECT_NAME}
   tf2_geometry_msgs
 )
 target_link_libraries(${PROJECT_NAME}
-  velocity_sampler trajectory_predictor obstacle_evaluator trajectory_scorer path_handler
+  velocity_sampler trajectory_predictor motion_predictor obstacle_evaluator trajectory_scorer path_handler
+  scan_obstacle_tracker dynamic_trajectory_evaluator
 )
 
 install(TARGETS ${PROJECT_NAME}
@@ -222,12 +290,26 @@ if(BUILD_TESTING)
   )
   ament_target_dependencies(test_controller nav2_core pluginlib rclcpp_lifecycle)
   add_dependencies(test_controller ${PROJECT_NAME})
+  target_link_libraries(test_controller motion_predictor)
 
-  ament_add_gtest(test_controller_diagnostics test/test_controller_diagnostics.cpp
-    src/controller_diagnostics.cpp)
-  target_compile_features(test_controller_diagnostics PRIVATE cxx_std_17)
-  target_include_directories(test_controller_diagnostics PRIVATE include)
-  ament_target_dependencies(test_controller_diagnostics rclcpp nav2_costmap_2d geometry_msgs)
+  ament_add_gtest(test_surface_motion test/test_surface_motion.cpp)
+  target_link_libraries(test_surface_motion scan_obstacle_tracker)
+  target_compile_definitions(test_surface_motion PRIVATE
+    SURFACE_MOTION_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test/fixtures/surface_motion")
+
+  ament_add_gtest(test_stoppable test/test_stoppable.cpp)
+  target_link_libraries(test_stoppable motion_predictor obstacle_evaluator dynamic_trajectory_evaluator)
+
+  ament_add_gtest(test_dynamic_risk test/test_dynamic_risk.cpp)
+  target_link_libraries(test_dynamic_risk dynamic_trajectory_evaluator trajectory_predictor)
+
+  ament_add_gtest(test_crossing_yield test/test_crossing_yield.cpp src/crossing_yield.cpp)
+  target_link_libraries(test_crossing_yield scan_obstacle_tracker motion_predictor)
+
+  ament_add_gtest(test_controller_scan test/test_controller_scan.cpp)
+  target_link_libraries(test_controller_scan ${PROJECT_NAME} dynamic_trajectory_evaluator)
+  ament_target_dependencies(test_controller_scan rclcpp rclcpp_lifecycle nav2_costmap_2d sensor_msgs)
+
 endif()
 
 install(DIRECTORY include/

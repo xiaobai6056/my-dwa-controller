@@ -5,6 +5,10 @@
 #include <cstdint>
 #include <limits>
 #include <optional>
+#include <iomanip>
+#include <sstream>
+
+#include "rcutils/logging.h"
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -92,7 +96,13 @@ void MyDWAController::configure(
 
   const double sim_time = parameter("sim_time", 1.7);
   const double simulation_dt = parameter("simulation_dt", 0.05);
-  auto predictor = std::make_unique<TrajectoryPredictor>(sim_time, simulation_dt);
+  MotionConfig motion;
+  motion.horizon = sim_time;
+  motion.step = simulation_dt;
+  motion.linear_acceleration = parameter("motion.linear_acceleration", 1.0);
+  motion.angular_acceleration = parameter("motion.angular_acceleration", 1.0);
+  motion.response_delay = parameter("motion.response_delay", 0.12);
+  auto predictor = std::make_unique<MotionPredictor>(motion);
   ScoreWeights weights;
   weights.obstacle = parameter("obstacle_weight", weights.obstacle);
   weights.speed = parameter("speed_weight", weights.speed);
@@ -124,6 +134,25 @@ void MyDWAController::configure(
     throw std::invalid_argument(
             "terminal control requires positive acceleration/angular limits and yaw tolerance <= pi");
   }
+  std::shared_ptr<ScanObstacleTracker> scan_tracker;
+  std::unique_ptr<DynamicFilter> dynamic_evaluator;
+  std::string scan_topic;
+  if (readParameter(*node, name + ".scan_tracker.enabled", false)) {
+    scan_topic = readParameter(*node, name + ".scan_tracker.topic", std::string("/scan"));
+    const auto min_points = readParameter(
+      *node, name + ".scan_tracker.min_cluster_points", int64_t{3});
+    if (scan_topic.empty() || min_points <= 0) {
+      throw std::invalid_argument("scan topic must be nonempty and minimum points positive");
+    }
+    scan_tracker = std::make_shared<ScanObstacleTracker>(
+      tf, parameter("scan_tracker.cluster_distance", 0.12),
+      static_cast<std::size_t>(min_points), parameter("scan_tracker.association_distance", 0.35));
+    const double robot_radius = costmap_ros->getUseRadius() ? costmap_ros->getRobotRadius() :
+      costmap_ros->getLayeredCostmap()->getCircumscribedRadius();
+    // Reuse the configured predictor mesh and V3's initial geometry/freshness
+    // conventions. These are not measured safety thresholds or braking inputs.
+    dynamic_evaluator = std::make_unique<DynamicFilter>(robot_radius, sim_time, simulation_dt);
+  }
   auto path_handler = std::make_unique<PathHandler>(tf);
 
   // 全部配置验证成功后才提交状态，失败时不会留下可激活的半初始化模块。
@@ -139,6 +168,15 @@ void MyDWAController::configure(
   forward_length_ = forward_length;
   follow_lookahead_ = follow_lookahead;
   heading_lookahead_ = heading_lookahead;
+  scan_tracker_ = std::move(scan_tracker);
+  dynamic_filter_ = std::move(dynamic_evaluator);
+  crossing_yield_ = readParameter(
+    *node, plugin_name_ + ".crossing_yield.enabled",
+    false) ? std::make_unique<CrossingYield>() : nullptr;
+  RCLCPP_INFO(
+    node->get_logger(), "Crossing yield configured: enabled=%s",
+    crossing_yield_ ? "true" : "false");
+  scan_topic_ = std::move(scan_topic);
   path_handler_ = std::move(path_handler);
   predictor_ = std::move(predictor);
   scorer_ = std::move(scorer);
@@ -148,7 +186,6 @@ void MyDWAController::configure(
   terminal_xy_tolerance_ = xy_fallback;
   terminal_yaw_tolerance_ = yaw_fallback;
   sim_time_ = sim_time;
-  diagnostics_.reset();
   RCLCPP_INFO(
     node->get_logger(), "Controller %s configured: max_v=%.3f, horizon=%.3f, forward_length=%.3f",
     plugin_name_.c_str(), configured_max_v_, sim_time, forward_length_);
@@ -183,8 +220,33 @@ void MyDWAController::setPlan(const nav_msgs::msg::Path & path)
 void MyDWAController::activate()
 {
   std::lock_guard<std::mutex> lock(state_mutex_);
-  if (!path_handler_ || !predictor_ || !scorer_ || node_.expired()) {
+  auto node = node_.lock();
+  if (!path_handler_ || !predictor_ || !scorer_ || !node) {
     throw std::logic_error("controller is not configured");
+  }
+  if (scan_tracker_) {
+    scan_tracker_ = scan_tracker_->newSession();
+    if (crossing_yield_) {crossing_yield_->reset();}
+    const auto target_frame = costmap_ros_->getGlobalFrameID();
+    const auto process = [tracker = std::weak_ptr<ScanObstacleTracker>(scan_tracker_),
+        weak_node = node_, target_frame]() {
+        if (auto current = tracker.lock()) {
+          if (auto parent = weak_node.lock()) {
+            current->processPending(target_frame, parent->now());
+          }
+        }
+      };
+    // Poll on this existing node/executor, without waiting inside Scan or TF callbacks.
+    scan_tf_timer_ = node->create_wall_timer(std::chrono::milliseconds(10), process);
+    scan_subscription_ = node->create_subscription<sensor_msgs::msg::LaserScan>(
+      scan_topic_, rclcpp::SensorDataQoS(),
+      [tracker = std::weak_ptr<ScanObstacleTracker>(scan_tracker_), process](
+        sensor_msgs::msg::LaserScan::ConstSharedPtr scan) {
+        if (auto current = tracker.lock()) {
+          current->enqueue(std::move(scan));
+          process();
+        }
+      });
   }
   active_ = true;
 }
@@ -193,6 +255,11 @@ void MyDWAController::deactivate()
 {
   std::lock_guard<std::mutex> lock(state_mutex_);
   active_ = false;
+  scan_subscription_.reset();
+  scan_tf_timer_.reset();
+  if (scan_tracker_) {
+    scan_tracker_->reset();
+  }
   goal_phase_ = GoalPhase::Normal;
 }
 
@@ -202,6 +269,12 @@ void MyDWAController::cleanup()
   active_ = false;
   goal_phase_ = GoalPhase::Normal;
   global_plan_ = nav_msgs::msg::Path{};
+  scan_subscription_.reset();
+  scan_tf_timer_.reset();
+  scan_tracker_.reset();
+  dynamic_filter_.reset();
+  crossing_yield_.reset();
+  scan_topic_.clear();
   path_handler_.reset();
   predictor_.reset();
   scorer_.reset();
@@ -233,21 +306,24 @@ void MyDWAController::setSpeedLimit(const double & speed_limit, const bool & per
   scorer_ = std::move(scorer);
 }
 
+std::shared_ptr<const ScanSnapshot> MyDWAController::getScanSnapshot()
+{
+  std::lock_guard<std::mutex> lock(state_mutex_);
+  return active_ && scan_tracker_ ? scan_tracker_->snapshot() : nullptr;
+}
+
 void MyDWAController::prepareControlInputs(
   const geometry_msgs::msg::PoseStamped & pose, const geometry_msgs::msg::Twist & velocity,
-  nav2_core::GoalChecker * goal_checker, ControlInputs & inputs, CycleDiagnostics & cycle) const
+  nav2_core::GoalChecker * goal_checker, ControlInputs & inputs) const
 {
   const auto local_frame = costmap_ros_->getGlobalFrameID();
   if (pose.header.frame_id != local_frame) {
     throw std::invalid_argument("robot pose frame must match costmap global frame");
   }
   // PathHandler 校验位姿和路径消息，并按本周期时间完成唯一一组路径 TF。
-  cycle.beginTiming(DiagnosticTiming::Path);
   inputs.local_path = path_handler_->getLocalPath(
     global_plan_, pose, local_frame,
     forward_length_, &inputs.distance_to_goal, &inputs.true_goal);
-  cycle.finishTiming();
-  cycle.recordPath(inputs.local_path);
   // One gate for all candidates, based on the actual robot and true goal.
   // getTolerances() is read-only; isGoalReached() would mutate a stateful checker.
   geometry_msgs::msg::Pose tolerance;
@@ -257,23 +333,16 @@ void MyDWAController::prepareControlInputs(
       tolerance.position.x >= 0.0 && tolerance.position.y >= 0.0)
     {
       inputs.terminal_radius = std::max(tolerance.position.x, tolerance.position.y);
-      cycle.xy_fallback = false;
     }
     try {
       geometry_msgs::msg::Pose yaw_pose;
       yaw_pose.orientation = tolerance.orientation;
       inputs.yaw_tolerance = std::abs(toPose2D(yaw_pose).theta);
-      cycle.yaw_fallback = false;
     } catch (const std::invalid_argument &) {
       // Unsupported quaternion fields leave the explicit fallback active.
     }
   }
-  cycle.follow_reference = lookAheadOnPath(
-    inputs.local_path, PathProjection{inputs.local_path.front(), 0, 0.0, 0.0},
-    follow_lookahead_).value().point;
   inputs.initial = toPose2D(pose.pose);
-  cycle.debug_pose = inputs.initial;
-  cycle.stage = "sampling";
   inputs.current = {velocity.linear.x, velocity.angular.z};
 }
 
@@ -282,7 +351,9 @@ void MyDWAController::prepareGoalControl(
 {
   auto candidates = sampleVelocities(inputs.current, sampling_config_);
   if (candidates.empty()) {
-    throw nav2_core::PlannerException("No candidate velocities in the dynamic window");
+    goal.phase = goal_phase_;
+    goal.sampling = sampling_config_;
+    return;
   }
   const double min_v = candidates.front().v;
   double min_abs_w = std::numeric_limits<double>::infinity();
@@ -339,150 +410,264 @@ bool MyDWAController::isGoalCandidateAllowed(
          (!goal.angular_braking && candidate.omega * goal.yaw_error < 0.0)));
 }
 
-MyDWAController::CandidateScore MyDWAController::scoreCandidate(
-  const Trajectory & trajectory, const ObstacleEvaluation & obstacle,
+ScoreResult MyDWAController::scoreCandidate(
+  const Trajectory & trajectory, double obstacle_cost,
   const ControlInputs & inputs, const GoalControlContext & goal) const
 {
-  CandidateScore result;
+  ScoreResult result{};
 
   if (goal.phase == GoalPhase::Normal) {
-    result.costs = scorer_->score(
-      trajectory, inputs.local_path, obstacle.mean_cost,
+    result = scorer_->score(
+      trajectory, inputs.local_path, obstacle_cost,
       goal.heading_enabled);
   } else {
-    result.rotation_cost = std::abs(
+    result.total_cost = std::abs(
       angleError(
         inputs.true_goal.theta,
         trajectory.poses.back().theta));
-    result.costs.total_cost = result.rotation_cost;
   }
   return result;
 }
 
 Velocity2D MyDWAController::selectBestCandidate(
   const ControlInputs & inputs, const GoalControlContext & goal,
-  const std::vector<Velocity2D> & candidates, CycleDiagnostics & cycle) const
+  const std::vector<Velocity2D> & commands)
 {
-  std::optional<Velocity2D> best;
-  double best_cost = std::numeric_limits<double>::infinity();
-  auto * costmap = costmap_ros_->getCostmap();
+  struct Candidate
   {
-    // TF 已完成；仅在候选评估期间持有一次地图锁，所有候选读取同一地图状态。
-    cycle.beginTiming(DiagnosticTiming::MapLock);
-    std::unique_lock<nav2_costmap_2d::Costmap2D::mutex_t> map_lock(*costmap->getMutex());
-    cycle.finishTiming();
-    for (const auto & candidate : candidates) {
-      ++cycle.processed;
-      if (!isGoalCandidateAllowed(candidate, inputs, goal)) {
-        ++cycle.terminal_rejected;
-        continue;
+    Trajectory nominal, backup;
+    double obstacle_cost, stop_time;
+  };
+  std::vector<Candidate> feasible;
+  const auto fallback = predictor_->predict(inputs.initial, inputs.current, {}, 0);
+  bool fallback_static_clear;
+  std::size_t horizon_rejected = 0, static_rejected = 0, nominal_rejected = 0;
+  const auto node = node_.lock();
+  auto * map = costmap_ros_->getCostmap();
+  {
+    std::unique_lock<nav2_costmap_2d::Costmap2D::mutex_t> map_lock(*map->getMutex());
+    if (rcutils_logging_logger_is_enabled_for(
+        node->get_logger().get_name(), RCUTILS_LOG_SEVERITY_DEBUG))
+    {
+      // Capture exactly the locked bytes used for this cycle's static checks.
+      constexpr char hex[] = "0123456789abcdef";
+      const std::size_t cells = static_cast<std::size_t>(map->getSizeInCellsX()) *
+        map->getSizeInCellsY();
+      std::string bytes;
+      bytes.reserve(2 * cells);
+      for (std::size_t i = 0; i < cells; ++i) {
+        const auto cost = map->getCharMap()[i];
+        bytes.push_back(hex[cost >> 4]);
+        bytes.push_back(hex[cost & 15]);
       }
-      cycle.beginTiming(DiagnosticTiming::Prediction);
-      const auto trajectory = predictor_->predict(inputs.initial, candidate);
-      cycle.finishTiming();
-      cycle.beginTiming(DiagnosticTiming::Obstacle);
-      ObstacleRejection rejection = ObstacleRejection::None;
-      const auto obstacle = evaluateTrajectory(trajectory, *costmap, &rejection);
-      cycle.finishTiming();
-      if (!obstacle.collision_free) {
-        ++cycle.rejected[static_cast<std::size_t>(rejection)];
-        continue;
+      std::ostringstream snapshot;
+      snapshot << std::setprecision(17) << "{\"cycle\":" << diagnostic_cycle_
+               << ",\"origin\":[" << map->getOriginX() << ',' << map->getOriginY()
+               << "],\"resolution\":" << map->getResolution()
+               << ",\"width\":" << map->getSizeInCellsX()
+               << ",\"height\":" << map->getSizeInCellsY()
+               << ",\"data_hex\":" << std::quoted(bytes) << '}';
+      RCLCPP_DEBUG(node->get_logger(), "Costmap snapshot: %s", snapshot.str().c_str());
+    }
+    fallback_static_clear = evaluateTrajectory(fallback.trajectory, *map).collision_free;
+    for (const auto & command : commands) {
+      if (!isGoalCandidateAllowed(command, inputs, goal)) {continue;}
+      auto backup = predictor_->predict(
+        inputs.initial, inputs.current, command, sampling_config_.control_dt);
+      if (backup.stop_time > sim_time_) {++horizon_rejected; continue;}
+      if (!evaluateTrajectory(backup.trajectory, *map).collision_free) {
+        ++static_rejected; continue;
       }
-      cycle.recordValid(candidate);
-      cycle.beginTiming(DiagnosticTiming::Scoring);
-      const auto score = scoreCandidate(trajectory, obstacle, inputs, goal);
-      cycle.finishTiming();
-      cycle.recordScored(candidate, score.costs, obstacle, score.rotation_cost);
-      const bool same_speed_priority = !best || goal.phase != GoalPhase::Slowing ||
-        candidate.v == best->v;
-      const bool lower_speed = best && goal.phase == GoalPhase::Slowing &&
-        candidate.v < best->v;
-      if (same_speed_priority && score.costs.total_cost == best_cost) {
-        ++cycle.ties;
+      auto nominal = predictor_->predict(inputs.initial, inputs.current, command, sim_time_);
+      if (!evaluateTrajectory(nominal.trajectory, *map).collision_free) {
+        ++nominal_rejected; continue;
       }
-      // Slowing is lexicographic: smallest collision-free reachable v, then yaw.
-      // Ordinary navigation preserves its existing weighted score/tie policy.
-      if (!best || lower_speed || (same_speed_priority &&
-        (score.costs.total_cost < best_cost ||
-        (score.costs.total_cost == best_cost &&
-        std::abs(candidate.omega) < std::abs(best->omega)))))
-      {
-        const bool strictly_better = lower_speed || score.costs.total_cost < best_cost;
-        best = candidate;
-        best_cost = score.costs.total_cost;
-        cycle.recordBest(strictly_better);
-      }
+      const double cost = trajectoryObstacleCost(nominal.trajectory, *map);
+      feasible.push_back(
+        {std::move(nominal.trajectory), std::move(
+            backup.trajectory), cost, backup.stop_time});
     }
   }
-  cycle.stage = "selection";
-  if (!best) {
-    throw nav2_core::PlannerException("No collision-free feasible trajectory");
+
+  const auto now = node->now();
+  const auto scan = scan_tracker_ ? scan_tracker_->snapshot() : nullptr;
+  std::vector<const Trajectory *> queries{&fallback.trajectory};
+  for (const auto & c : feasible) {
+    queries.push_back(&c.backup);
   }
-  return *best;
+  PreparedFilter prepared;
+  if (dynamic_filter_) {
+    prepared = dynamic_filter_->prepare(queries, scan.get(), costmap_ros_->getGlobalFrameID(), now);
+  }
+  std::optional<std::size_t> best;
+  double best_score = std::numeric_limits<double>::infinity();
+  std::size_t accepted = 0, dynamic_rejected = 0;
+  std::size_t geometry_rejected = 0, unavailable_rejected = 0;
+  std::vector<std::size_t> rejected(scan ? scan->obstacles.size() : 0, 0);
+  std::optional<double> selected_clearance;
+  for (std::size_t i = 0; i < feasible.size(); ++i) {
+    const auto & c = feasible[i];
+    const auto risk =
+      dynamic_filter_ ? dynamic_filter_->evaluate(c.backup, prepared) : FilterResult{};
+    if (dynamic_filter_ && !risk.available) {++unavailable_rejected; continue;}
+    if (dynamic_filter_ &&
+      (dynamic_filter_->observedGeometryCollision(c.nominal, prepared) ||
+      dynamic_filter_->observedGeometryCollision(c.backup, prepared)))
+    {
+      ++geometry_rejected;
+      continue;
+    }
+    if (!risk.conflicts.empty()) {
+      ++dynamic_rejected;
+      for (const auto & conflict : risk.conflicts) {
+        ++rejected[conflict.index];
+      }
+      continue;
+    }
+    ++accepted;
+    const double score = scoreCandidate(c.nominal, c.obstacle_cost, inputs, goal).total_cost;
+    const auto & cmd = c.nominal.command;
+    bool prefer = !best;
+    if (best) {
+      const auto & old = feasible[*best].nominal.command;
+      prefer = goal.phase == GoalPhase::Slowing && cmd.v != old.v ? cmd.v < old.v :
+        score < best_score || (score == best_score && std::abs(cmd.omega) < std::abs(old.omega));
+    }
+    if (prefer) {best = i; best_score = score; selected_clearance = risk.min_clearance;}
+  }
+  const auto fallback_risk = dynamic_filter_ ?
+    dynamic_filter_->evaluate(fallback.trajectory, prepared) : FilterResult{};
+  const bool fallback_geometry_collision = dynamic_filter_ &&
+    dynamic_filter_->observedGeometryCollision(fallback.trajectory, prepared);
+  const bool fallback_complete = fallback.stop_time <= sim_time_;
+  const bool emergency = !best && (!fallback_static_clear || !fallback_complete ||
+    (dynamic_filter_ && (!fallback_risk.available ||
+    !fallback_risk.conflicts.empty() || fallback_geometry_collision)));
+  const auto dwa_candidate = best ? feasible[*best].nominal.command : Velocity2D{0, 0};
+  auto output_command = dwa_candidate;
+  if (crossing_yield_) {
+    auto y = crossing_yield_->update(
+      scan.get(), inputs.local_path, inputs.initial, inputs.current, fallback.trajectory,
+      now.nanoseconds(), best.has_value());
+    if (y.hold && best && fallback_complete && fallback_static_clear &&
+      (!dynamic_filter_ || (fallback_risk.available && fallback_risk.conflicts.empty() &&
+      !fallback_geometry_collision)))
+    {
+      const auto & selected = feasible[*best];
+      const MotionRollout backup{selected.backup, selected.stop_time};
+      y.hold = !crossing_yield_->canApproach(
+        inputs.local_path, fallback, backup, sim_time_, predictor_->step(),
+        std::max(std::abs(inputs.current.v), std::abs(dwa_candidate.v)));
+    }
+    y.hold = crossing_yield_->latchHold(y.hold);
+    if (y.hold) {
+      output_command = Velocity2D{0, 0};
+    }
+    RCLCPP_INFO(
+      node->get_logger(), "Crossing yield: {\"now_ns\":%ld,\"scan_ns\":%ld,\"hold\":%s,\"triggered\":%s,\"released\":%s,\"occupied\":%s,\"clear\":%s,\"safe_stop\":%s,\"margin\":%.9f,\"entry\":%.9f,\"exit\":%.9f,\"rank\":%d,\"clear_scans\":%d}",
+      now.nanoseconds(), scan ? rclcpp::Time(
+        scan->stamp).nanoseconds() : int64_t{0}, y.hold ? "true" : "false", y.triggered ? "true" : "false", y.released ? "true" : "false", y.occupied ? "true" : "false", y.clear ? "true" : "false", y.safe_stop ? "true" : "false", y.margin, y.entry, y.exit, y.evidence_rank,
+      y.clear_scans);
+  }
+  const char * state = !prepared.input.input_available ? "unavailable" :
+    prepared.input.unknown_clusters ? "partial" : "complete";
+  std::ostringstream out;
+  out << std::setprecision(17) << std::boolalpha
+      << "{\"cycle\":" << diagnostic_cycle_ << ",\"now_ns\":" << now.nanoseconds()
+      << ",\"scan_ns\":" << (scan ? rclcpp::Time(scan->stamp).nanoseconds() : 0)
+      << ",\"known_input_available\":" << prepared.input.input_available
+      << ",\"evidence_state\":" << std::quoted(state)
+      << ",\"input_reason\":" << std::quoted(prepared.input.reason)
+      << ",\"known\":" << prepared.input.predicted_clusters
+      << ",\"unknown\":" << prepared.input.unknown_clusters
+      << ",\"input_points\":" << prepared.input.input_points
+      << ",\"retained_points\":" << prepared.input.retained_points
+      << ",\"observed_points\":" << prepared.unknown_points.size()
+      << ",\"sampled\":" << commands.size() << ",\"horizon_rejected\":" << horizon_rejected
+      << ",\"nominal_rejected\":" << nominal_rejected
+      << ",\"static_rejected\":" << static_rejected << ",\"static_feasible\":" << feasible.size()
+      << ",\"geometry_rejected\":" << geometry_rejected
+      << ",\"unavailable_rejected\":" << unavailable_rejected
+      << ",\"dynamic_rejected\":" << dynamic_rejected << ",\"accepted\":" << accepted
+      << ",\"mode\":" << std::quoted(best ? "navigate" : emergency ? "emergency" : "brake")
+      << ",\"candidate\":[" << dwa_candidate.v << ',' << dwa_candidate.omega << ']'
+      << ",\"output\":[" << output_command.v << ',' << output_command.omega << ']'
+    // Compatibility: selected has always contained the final, overridden output.
+      << ",\"selected\":[" << output_command.v << ',' << output_command.omega << ']'
+      << ",\"measured\":[" << inputs.current.v << ',' << inputs.current.omega << ']'
+      << ",\"initial\":[" << inputs.initial.x << ',' << inputs.initial.y << ',' <<
+    inputs.initial.theta << ']'
+      << ",\"selected_stop_time\":" << (best ? feasible[*best].stop_time : fallback.stop_time)
+      << ",\"selected_clearance\":";
+  if (selected_clearance) {out << *selected_clearance;} else {out << "null";}
+  out << ",\"fallback_static_clear\":" << fallback_static_clear
+      << ",\"fallback_complete\":" << fallback_complete
+      << ",\"fallback_dynamic_available\":" << fallback_risk.available
+      << ",\"fallback_known_collision\":" << !fallback_risk.conflicts.empty()
+      << ",\"fallback_geometry_collision\":" << fallback_geometry_collision
+      << ",\"clusters\":[";
+  if (scan) {
+    for (std::size_t i = 0; i < scan->obstacles.size(); ++i) {
+      const auto & o = scan->obstacles[i];
+      if (i) {out << ',';}
+      out << '[' << o.velocity_valid << ',' << o.vx << ',' << o.vy << ','
+          << o.points.size() << ',' << rejected[i] << ']';
+    }
+  }
+  out << "]}";
+  RCLCPP_INFO(node->get_logger(), "Stoppable decision: %s", out.str().c_str());
+  return output_command;
 }
+
 
 geometry_msgs::msg::TwistStamped MyDWAController::computeVelocityCommands(
   const geometry_msgs::msg::PoseStamped & pose, const geometry_msgs::msg::Twist & velocity,
   nav2_core::GoalChecker * goal_checker)
 {
-  CycleTiming timing;
+  const auto invocation_start = std::chrono::steady_clock::now();
   std::lock_guard<std::mutex> state_lock(state_mutex_);
-  timing.stateLockAcquired();
+  const auto locked_at = std::chrono::steady_clock::now();
+  ++diagnostic_cycle_;
   auto node = node_.lock();
-  CycleDiagnostics cycle(timing);
-  cycle.setInput(pose, velocity, {follow_lookahead_, heading_lookahead_, score_weights_});
-  ControlInputs inputs;
-  inputs.terminal_radius = terminal_xy_tolerance_;
-  inputs.yaw_tolerance = terminal_yaw_tolerance_;
-  GoalControlContext goal;
-  goal.sampling = sampling_config_;
-  goal.phase = goal_phase_;
-  goal.angular_cap = sampling_config_.max_w;
-  goal.approach_cap = sampling_config_.max_v;
-  const auto logger = node ? node->get_logger() : rclcpp::get_logger("my_dwa_controller");
-  const auto report_debug = [&](const char * error, bool failed = false) {
-      cycle.heading_enabled = goal.heading_enabled;
-      cycle.distance_to_goal = inputs.distance_to_goal;
-      cycle.terminal_radius = inputs.terminal_radius;
-      cycle.yaw_tolerance = inputs.yaw_tolerance;
-      cycle.true_goal = inputs.true_goal;
-      cycle.yaw_error = goal.yaw_error;
-      cycle.angular_cap = goal.angular_cap;
-      cycle.approach_cap = goal.approach_cap;
-      cycle.angular_braking = goal.angular_braking;
-      cycle.goal_phase = goal_phase_ == GoalPhase::Normal ? "normal" :
-        goal_phase_ == GoalPhase::Slowing ? "slowing" : "rotating";
-      diagnostics_.report(logger, cycle, error, failed);
+  if (!active_ || !node || !costmap_ros_) {
+    throw std::logic_error("controller is not active and configured");
+  }
+
+  const auto report_timing = [&](bool completed) {
+      const auto finished_at = std::chrono::steady_clock::now();
+      RCLCPP_DEBUG(
+        node->get_logger(),
+        "Control timing: {\"cycle\":%lu,\"completed\":%s,\"start_steady_ns\":%ld,\"end_steady_ns\":%ld,\"compute_us\":%.3f,\"lock_wait_us\":%.3f}",
+        diagnostic_cycle_, completed ? "true" : "false",
+        std::chrono::duration_cast<std::chrono::nanoseconds>(
+          invocation_start.time_since_epoch()).count(),
+        std::chrono::duration_cast<std::chrono::nanoseconds>(
+          finished_at.time_since_epoch()).count(),
+        std::chrono::duration<double, std::micro>(finished_at - invocation_start).count(),
+        std::chrono::duration<double, std::micro>(locked_at - invocation_start).count());
     };
   try {
-    if (!active_ || !node || !costmap_ros_) {
-      throw std::logic_error("controller is not active and configured");
-    }
-    prepareControlInputs(pose, velocity, goal_checker, inputs, cycle);
+    ControlInputs inputs;
+    inputs.terminal_radius = terminal_xy_tolerance_;
+    inputs.yaw_tolerance = terminal_yaw_tolerance_;
+    GoalControlContext goal;
+    prepareControlInputs(pose, velocity, goal_checker, inputs);
     prepareGoalControl(inputs, goal);
 
     // The first (unconstrained) sampling inside prepareGoalControl must stay before
     // phase updates; this second sampling uses the resulting reachable limits.
     const auto candidates = sampleVelocities(inputs.current, goal.sampling);
-    cycle.recordSamples(candidates);
-    if (candidates.empty()) {
-      throw nav2_core::PlannerException("No candidate velocities in the dynamic window");
-    }
-    const auto best = selectBestCandidate(inputs, goal, candidates, cycle);
+    const auto best = selectBestCandidate(inputs, goal, candidates);
 
     geometry_msgs::msg::TwistStamped command;
     command.header.stamp = node->now();
     command.header.frame_id = costmap_ros_->getBaseFrameID();
     command.twist.linear.x = best.v;
     command.twist.angular.z = best.omega;
-    cycle.stage = "output";
-    report_debug("none");
+    report_timing(true);
     return command;
-  } catch (const std::exception & error) {
-    report_debug(error.what(), true);
-    throw;
   } catch (...) {
-    report_debug("non-standard exception", true);
+    report_timing(false);
     throw;
   }
 }
