@@ -14,3 +14,5 @@ Scope approved by the user: independent offline experiments only. Formal baselin
 The 0.05 m and 0.20 s screening thresholds classify results only; they never enter the sampler, score, safety constraints or robot execution. Future-truth geometry and complete scene observation remain inherited idealizations.
 
 Result: no scheme qualified; the conditional t=6/8 step was deliberately skipped, not claimed completed as trials.
+
+Result: no scheme qualified; the conditional t=6/8 step was deliberately skipped, not claimed completed as trials.

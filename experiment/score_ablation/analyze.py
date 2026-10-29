@@ -28,7 +28,7 @@ for folder in sorted((root/'results/phase1').iterdir()):
     summary=json.loads((folder/'summary.json').read_text())[0]
     rows=list(map(json.loads,(folder/f'start_{start:.2f}.jsonl').read_text().splitlines()))
     executed=[r for r in rows if 'next_pose' in r];all_rows[scheme]=executed
-    early=[r for r in executed if r['t']+.05<8.8+1e-8]
+    early=[r for r in executed if r['t']+.05<8.8-1e-8]
     rear_shift=max([initial[1]-r['next_pose'][1] for r in early]+[0])
     lateral=max([abs(initial[1]-r['next_pose'][1]) for r in early]+[0])
     negative_onset=first_sustained(executed,lambda r:r['next_pose'][1]<=initial[1]-.05)
@@ -89,7 +89,7 @@ for a,b in [('A','B'),('C','D'),('C','E')]:
     same[a+b]={'cycles':len(all_rows[a]),'command_mismatches':sum(x['selected']!=y['selected'] for x,y in zip(all_rows[a],all_rows[b])),
        'pose_mismatches':sum(x['next_pose']!=y['next_pose'] for x,y in zip(all_rows[a],all_rows[b]))}
 result={'fixed_end_time':14,'metric_thresholds':{'rearward_shift':.05,'sustain_seconds':.2,'pass_gain':.2,
-    'turn_sign_deadband':.05,'slow_crawl_v_range':[.01,.05],'static_hugging_approx_gap':.10},
+    'turn_sign_deadband':.05,'slow_crawl_v_range':[.01,.05],'static_hugging_approx_gap':.10,'pre_release_includes_endpoint':False},
     'metrics':metrics,'shortlist':shortlist,'phase2_required':bool(shortlist),'sequence_comparisons':same,
     'note':'No policy-level normalization, new planner, guide point or safety change. Thresholds classify outputs only.'}
 (root/'analysis.json').write_text(json.dumps(result,indent=2))
