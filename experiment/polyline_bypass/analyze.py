@@ -1,5 +1,8 @@
+import pathlib, sys
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from paths import data_root, previous_root
 import pathlib,sys,json,math
-ROOT=pathlib.Path('/home/user/ros2_experiments/polyline_bypass_20261029');sys.path.insert(0,str(ROOT/'scripts'))
+ROOT=data_root('polyline_bypass_20261029')
 from common import rows,metrics
 import matplotlib
 matplotlib.use('Agg')

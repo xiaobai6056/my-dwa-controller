@@ -83,7 +83,7 @@ y ≥ actor_center_y - 0.25 - 0.27
 
 独立只读审查重新运行 9 项测试并复算上述日志，确认五组通过时间、入区时间、净距与横向偏移。审查要求明确额外未来真值门禁，以及 ranked 候选尚未全部检查队列后备；本报告已披露。
 
-实验根目录 `/home/user/ros2_experiments/rolling_bypass_20261029`，源码 `source/experiment/rolling/`，分支 `codex/rolling-bypass-analysis-20261029`；从前轮提交 `8285416c604cda2d8f16eba8745010387691bf1c` 独立 `clone --no-hardlinks`。正式 main 仍为 `f7b6a45e4d858cee15e0fce22a1bd9b90e0c8446`。
+实验根目录 `external-evidence/rolling_bypass_20261029`，源码 `source/experiment/rolling/`，分支 `codex/rolling-bypass-analysis-20261029`；从前轮提交 `8285416c604cda2d8f16eba8745010387691bf1c` 独立 `clone --no-hardlinks`。正式 main 仍为 `f7b6a45e4d858cee15e0fce22a1bd9b90e0c8446`。
 
 保存 `input.json`、原参数/SDF副本、`results/start_*.jsonl`、`results/summary.json`、`analysis.json`、`selected_candidate_audit.json`、全部构建/红绿/运行日志、图表、实际离线工具及链接库 SHA、保护文件前后 SHA 和 Git bundle。没有新的实际 Controller 插件映射、Gazebo 接触或导航结果；无自动合并、推送或正式部署。
 

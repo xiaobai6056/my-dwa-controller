@@ -1,6 +1,10 @@
 """One fixed-parameter parking-baseline / reference-guidance comparison."""
+import pathlib, sys
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from paths import data_root, previous_root
+
 import pathlib,json,subprocess,sys
-root=pathlib.Path('/home/user/ros2_experiments/locked_reference_20261029')
+root=data_root('locked_reference_20261029')
 phase=sys.argv[1]
 starts=[4.] if phase=='phase1' else [6.,8.]
 if phase!='phase1':

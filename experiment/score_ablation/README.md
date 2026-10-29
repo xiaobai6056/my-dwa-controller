@@ -1,28 +1,21 @@
-# Reproduce scoring ablations without ROS nodes or Gazebo
+# Historical scoring ablation
 
-Run in WSL Ubuntu-22.04. The preserved prior installation provides the exact
-original exported libraries; the experiment builds only the copied offline tool.
+[REPORT.md](REPORT.md) preserves the fixed A–G comparison, exact weights,
+classification definitions and negative conclusion. No scheme qualified, so
+6/8 s confirmation was not performed. [The index](../INDEX.md) identifies the
+current final-snapshot reproduction; it does not reproduce predecessor weights
+using the final polyline runner.
 
-```bash
-source /opt/ros/humble/setup.bash
-source /home/user/ros2_experiments/simplified_bypass_20261029/baseline_install/setup.bash
-cd /home/user/ros2_experiments/score_ablation_20261029
-cmake -S source/experiment/rolling -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j3
-ctest --test-dir build --output-on-failure
-# Create a new directory so archived raw outputs are never overwritten.
-mkdir reproduction_B_t4
-build/rolling input.json reproduction_B_t4 B 4
-```
+Historical `run_trials.py` requires the matching archived ablation `build/rolling`
+plus an explicit `EXPERIMENT_DATA_ROOT` with original `input.json`, `params/*.json`
+and a new results destination. `EXPERIMENT_PREVIOUS_ROOT` selects the matching
+rolling evidence archive for A-prefix parity. Result directories are exclusive;
+A parity must pass before B–G. Do not use a current final-snapshot binary to
+claim historical ablation reproduction or run new confirmation without evidence.
 
-Use A through G as the fourth process argument, followed by start time. The
-runner always observes until navigation time 14 s; it records first passage and
-continues the original safety checks. No original gate, initial state, reference
-path or scene changes between schemes. `params/*.json` records actual absolute
-weights, with no weight-sum normalization.
-
-`commands.jsonl` is the exact seven-command phase-one record. `run_trials.py`
-refuses to overwrite existing result directories and checks A's complete
-original prefix before executing B through G. No second-stage trials were
-selected. `analyze.py` contains output-only classification definitions; they do
-not enter the controller or safety logic.
+`EXPERIMENT_DATA_ROOT=/path/to/copied_ablation_evidence python3 experiment/score_ablation/analyze.py`
+recomputes derived JSON/plots from original `results/phase1` and `input.json`.
+It writes only derived outputs in the selected directory; these classifications
+never enter control or safety logic. Raw archives and binary identities are
+external, not bundled. Ideal geometry/association and future-truth gates remain
+model assumptions; real perception/execution and safety are unverified.

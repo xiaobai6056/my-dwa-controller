@@ -1,9 +1,13 @@
 """Classify actual displacement and risk/reference lifecycles without rerunning."""
+import pathlib, sys
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from paths import data_root, previous_root
+
 import pathlib,json,math
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-root=pathlib.Path('/home/user/ros2_experiments/locked_reference_20261029')
+root=data_root('locked_reference_20261029')
 inp=json.loads((root/'input.json').read_text());initial=inp['initial']
 def onset(rows,distance):
     begin=None

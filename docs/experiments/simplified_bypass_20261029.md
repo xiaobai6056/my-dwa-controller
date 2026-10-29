@@ -6,9 +6,9 @@
 
 ## 基线与隔离
 
-- 正式仓库：`/home/user/ros2_ws/src/my_dwa_controller`。
+- 正式仓库：`external-workspace/src/my_dwa_controller`。
 - 基线：`f7b6a45e4d858cee15e0fce22a1bd9b90e0c8446`。
-- 实验目录：`/home/user/ros2_experiments/simplified_bypass_20261029`。
+- 实验目录：`external-evidence/simplified_bypass_20261029`。
 - 独立源码：`source/`；分支：`codex/simplified-bypass-20261029`。
 - 使用 `git clone --no-hardlinks`，源码与 Git 对象没有和被保护源文件共享 inode。
 - 正式源码、正式安装视图、上轮 reserve020 全部历史文件的 3256 个前后 SHA256 一致；见 `protected_before.json`、`preservation_after.json`。本轮不合并、不推送、不正式部署。
@@ -42,7 +42,7 @@ q ≥ 当前聚类 min(q) - 0.27
 
 只读历史样本：
 
-`/home/user/ros2_experiments/crossing_yield_reserve020_20261029/closed_loop_r1_20261029/B_D01_reserve020_r1`。
+`external-evidence/crossing_yield_reserve020_20261029/closed_loop_r1_20261029/B_D01_reserve020_r1`。
 
 使用原始 rosbag Scan、`/tf`、`/tf_static`、`/plan` 和逐周期已记录实测位姿/速度。所有 bag Scan 通过本轮独立构建的真实 ScanObstacleTracker 重建观测，以源时间戳取快照。用真实 PathHandler 从 Scan 接收前最近已接收的全局路径恢复局部路径，冻结首次方向；采样器、MotionPredictor 和 DynamicFilter 来自指定 main 的独立构建。
 

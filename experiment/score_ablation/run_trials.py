@@ -1,7 +1,11 @@
 """Run only specified weights; A prefix must match before the remaining sweep."""
+import pathlib, sys
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from paths import data_root, previous_root
+
 import pathlib,json,subprocess,sys,hashlib
-root=pathlib.Path('/home/user/ros2_experiments/score_ablation_20261029')
-base=root.parent/'rolling_bypass_20261029'
+root=data_root('score_ablation_20261029')
+base=previous_root()
 phase=sys.argv[1]
 if phase=='phase1':trials=[(s,4.) for s in 'ABCDEFG']
 elif phase=='phase2':

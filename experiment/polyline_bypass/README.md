@@ -1,65 +1,67 @@
-# Reproduce the polyline experiment (offline only)
+# Polyline offline reproduction
 
-Root: `/home/user/ros2_experiments/polyline_bypass_20261029`.
-Independent no-hardlink branch `codex/polyline-bypass-20261029`; parent 5857df3.
-Authoritative PLAN.md records geometry, fixed matrix and stopping rules.
-Inherited experiment plans are historical, not the current experiment's plan.
+From the repository root, in Linux/Bash:
 
 ```bash
 source /opt/ros/humble/setup.bash
-source /home/user/ros2_experiments/simplified_bypass_20261029/baseline_install/setup.bash
-root=/home/user/ros2_experiments/polyline_bypass_20261029
-bash "$root/build.sh"
+source /path/to/controller_install/setup.bash
+bash experiment/polyline_bypass/reproduce.sh /path/to/new_external_output
 ```
 
-commands.jsonl records each actual rolling invocation, all once. Results exist
-for A0/B0/A/B/C/D through16s, E through the first failed fallback at7.15s.
-F/G/H, upper multipliers and 6/8s were NOT run. Do not resume or retry the
-stopped matrix without new human authorization. No runtime/Gazebo was run.
+Replace both `/path/to` locations with real paths. The output directory must be
+new and outside this repository. No ROS node, Gazebo, installation or deployment
+is launched. Dependencies are listed in [the index](../INDEX.md).
 
-For independent reproduction of a safe archived case into a new directory:
+This entrypoint builds the final checked-in rolling sources, runs five CTest
+executables (41 individual tests), and executes bundled A0/A1/A2 at start=4 s.
+A0 uses mode A (latched parking); A1/A2 use mode B with their exact per-input
+reference parameters. These names are bundled reproduction cases, distinct from
+the historical A–H matrix names in [REPORT.md](REPORT.md). Input provenance paths
+are relative archive identifiers; runtime consumes embedded numerical scene data.
+
+The original experiment completed A0/B0/A–D through 16 s. E stopped at 7.15 s
+on a nominal braking exclusion failure, before advancing the abort row. F/G/H,
+12/16 multipliers and 6/8 s confirmation were not run. There was no qualifying
+best/second-best scheme and no real Controller/Gazebo trial. Preserve this stop;
+do not resume or tune the failed matrix.
+
+Design: entrance s=min(robot_s,zone.lo-margin), exit s=zone.hi+margin,
+q=zone.rear-margin; check every robot→entrance→exit segment against walls and the
+original exclusion zone. Four distinct fresh stopped observations admit a locked
+polyline; original path projection/cropping supplies P/G/H, with H multiplied only
+while guided. Other weights and all nominal/braking/queued safety gates remain.
+The predeclared screen required sustained >=0.05 m rearward displacement for
+>=0.2 s before 8.8 s, earlier actual entry, >=0.2 s full-pass gain over B0, release
+and path recovery without abnormal rotation. No case met the complete screen.
+
+Historical analysis requires the external original archive:
 
 ```bash
-mkdir "$root/results/reproduction_A"
-"$root/logs/rolling_executed" "$root/results/phase1/A/input.json" \
-  "$root/results/reproduction_A" B 4
+export EXPERIMENT_DATA_ROOT=/path/to/copied_polyline_evidence
+python3 experiment/polyline_bypass/analyze.py
+python3 experiment/polyline_bypass/diagnose.py
 ```
 
-Use mode A for A0 and mode B for the other cases. These example reproduction
-commands were not executed again. Per-case input.json preserves exact parameters;
-all other scene/input fields equal the original. End time, dynamics and safety
-gates are identical. No weight normalization; guided H only. Logs score fields
-describe proposed_candidate when command_held=true; selected is the actual output.
-The abort row contains a zero output but is not plant-advanced after failure.
-Source stamps have the inherited +1s clock offset; results use navigation time.
-
-Read-only analysis:
+These tools expect historical `results/phase1/{A0,B0,A,B,C,D,E}`, per-case
+`parameters.json`, original `input.json`, and (for diagnose.py) `failure_check.json`.
+They write derived files under the selected evidence root. The three-case output
+of reproduce.sh is not the complete historical archive. To recreate only E's
+read-only failure diagnostic, using archived E commands:
 
 ```bash
-python3 "$root/scripts/analyze.py"
-"$root/build/failure_check" "$root/input.json" \
-  "$root/results/phase1/E/start_4.00.jsonl" "$root/failure_check.json"
-python3 "$root/scripts/diagnose.py"
-python3 "$root/scripts/report.py"
+/path/to/build/failure_check "$EXPERIMENT_DATA_ROOT/input.json" \
+  "$EXPERIMENT_DATA_ROOT/results/phase1/E/start_4.00.jsonl" \
+  /path/to/new_failure_check.json
 ```
 
-failure_check replays archived commands to reconstruct the actual queue, current
-map and fallback at E's failure; pose parity is checked. It does not choose new
-actions or simulate beyond the abort. It directly establishes the failed
-exclusion subcondition; it does not claim a complete independent dynamic-filter
-audit of all fallback subconditions.
+This checks pose parity and the failed exclusion subcondition, without selecting
+new actions or advancing beyond the abort; it is not an independent full dynamic
+filter audit. Scores during command_held describe proposed_candidate; selected
+is actual output. Source timestamps have the inherited +1 s offset; reports use
+navigation-relative time. Ideal geometry, association, synthetic rays and future
+truth gates are conditional model assumptions. Minimum clearance is a circular
+footprint approximation, not a real sensor safety claim.
 
-Raw telemetry includes all scoring terms, rejection counts, scan source times,
-fixed polylines, changing zones, risk/reference states, actual actions/next poses.
-analysis.json adds crawl, translation stagnation (<0.5mm/cycle including initial
-waiting), reversals, total yaw and reference recovery. Minimum clearance is a
-scene-geometry circular-footprint approximation, not a real sensor safety claim.
-Ideal geometry/association/rays and future truth checks remain the inherited
-conditional model. No history Scan is reused after changing robot pose.
-
-41 tests (9 model +3 weights +14 original reference +5 tuning +10 polyline),
-red logs and final XML are retained. version_manifest.json contains actual ELF,
-linked immutable .so/.a and source identities; source.bundle recovers committed
-code/scripts. verification.json and evidence_manifest.json preserve original
-input protection and artifact hashes. Existing formal source/install/scenes and
-all prior experiments are unchanged. No merge, push or deployment.
+Original red/final XML, immutable ELF/library hashes, raw traces, commands,
+protection manifests and source bundle are external evidence inventories described
+by the historical report, not additional bundled files.

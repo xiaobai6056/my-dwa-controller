@@ -1,5 +1,8 @@
+import pathlib, sys
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from paths import data_root, previous_root
 import pathlib,json,math
-ROOT=pathlib.Path('/home/user/ros2_experiments/polyline_bypass_20261029')
+ROOT=data_root('polyline_bypass_20261029')
 INITIAL=json.loads((ROOT/'input.json').read_text())['initial']
 def rows(folder):
     return [json.loads(x) for x in next(folder.glob('start_*.jsonl')).read_text().splitlines()]

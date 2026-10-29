@@ -1,7 +1,10 @@
+import pathlib, sys
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from paths import data_root, previous_root
 import pathlib,sys,json,subprocess
-ROOT=pathlib.Path('/home/user/ros2_experiments/polyline_bypass_20261029');sys.path.insert(0,str(ROOT/'scripts'))
+ROOT=data_root('polyline_bypass_20261029')
 from common import metrics,rows
-BASE=ROOT.parent/'reference_sweep_20261029'
+BASE=previous_root()
 def run(name,mode,poly=False,h=1.,margin=.1,start=4.,phase='phase1'):
  d=ROOT/'results'/phase/name;d.mkdir(parents=True,exist_ok=False)
  inp=json.loads((ROOT/'input.json').read_text());inp['reference_parameters']={'polyline':poly,'heading_multiplier':h,'extra_clearance':margin,'forward_offset':margin}

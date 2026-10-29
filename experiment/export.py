@@ -1,11 +1,18 @@
 """Read-only export of recorded D01 t2 sensor/path inputs; no Gazebo launch."""
-import json, pathlib, bisect
+import json, pathlib, bisect, argparse
 import rosbag2_py
 from rclpy.serialization import deserialize_message
 from rosidl_runtime_py.utilities import get_message
 
-root = pathlib.Path('/home/user/ros2_experiments/simplified_bypass_20261029')
-run = pathlib.Path('/home/user/ros2_experiments/crossing_yield_reserve020_20261029/closed_loop_r1_20261029/B_D01_reserve020_r1')
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('run_directory', type=pathlib.Path, help='Original external recording: bag/ and paired_decisions.json')
+parser.add_argument('output_json', type=pathlib.Path, help='New exported JSON file')
+args = parser.parse_args()
+run = args.run_directory.expanduser().resolve()
+if not (run/'bag').is_dir() or not (run/'paired_decisions.json').is_file():
+    parser.error('run_directory must contain the original bag/ and paired_decisions.json')
+if args.output_json.exists():
+    parser.error('output_json already exists')
 reader = rosbag2_py.SequentialReader()
 reader.open(rosbag2_py.StorageOptions(uri=str(run/'bag'), storage_id='sqlite3'), rosbag2_py.ConverterOptions('', ''))
 types = {t.name: get_message(t.type) for t in reader.get_all_topics_and_types()}
@@ -24,5 +31,6 @@ for row in rows:
     d = row['decision']; i = bisect.bisect_right(times, scans[d['scan_ns']])-1
     row['plan'] = plans[i][1] if i >= 0 else None
     row['plan_receipt'] = times[i] if i >= 0 else None
-(root/'inputs.json').write_text(json.dumps({'run':str(run), 'rows':rows}, indent=2))
+with args.output_json.open('x') as output:
+    output.write(json.dumps({'run':str(run), 'rows':rows}, indent=2))
 print('exported cycles',len(rows),'plans',len(plans),'missing',sum(r['plan'] is None for r in rows))

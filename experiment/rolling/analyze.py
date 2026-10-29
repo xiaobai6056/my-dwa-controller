@@ -1,11 +1,15 @@
 """Summarize rolling trials and separately certify geometric connectivity."""
+import pathlib, sys
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from paths import data_root, previous_root
+
 import pathlib,json,collections,math
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
-root=pathlib.Path('/home/user/ros2_experiments/rolling_bypass_20261029')
+root=data_root('rolling_bypass_20261029')
 data=json.loads((root/'input.json').read_text())
 summaries=json.loads((root/'results/summary.json').read_text())
 def connected(t):

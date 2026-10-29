@@ -642,9 +642,9 @@
     8
   ],
   "historical_release": 8.8,
-  "history_run": "/home/user/ros2_experiments/crossing_yield_reserve020_20261029/closed_loop_r1_20261029/B_D01_reserve020_r1",
+  "history_run": "external-evidence/crossing_yield_reserve020_20261029/closed_loop_r1_20261029/B_D01_reserve020_r1",
   "observation": "complete scene geometry, NOT historical Scan",
-  "params_file": "/home/user/ros2_experiments/crossing_yield_reserve020_20261029/closed_loop_r1_20261029/B_D01_reserve020_r1/trial/configs/params_params_B.yaml",
+  "params_file": "external-evidence/crossing_yield_reserve020_20261029/closed_loop_r1_20261029/B_D01_reserve020_r1/trial/configs/params_params_B.yaml",
   "reference_parameters": {
     "polyline": false,
     "heading_multiplier": 1.0,

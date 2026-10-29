@@ -4,7 +4,7 @@
 
 ## 固定参数与可比性
 
-- 新独立目录 `/home/user/ros2_experiments/reference_sweep_20261029`；无硬链接 clone 自 locked_reference 的 b43493e，分支 `codex/reference-sweep-20261029`。正式 main f7b6a45 不变。
+- 新独立目录 `external-evidence/reference_sweep_20261029`；无硬链接 clone 自 locked_reference 的 b43493e，分支 `codex/reference-sweep-20261029`。正式 main f7b6a45 不变。
 - 只将绕行期间既有 Heading 权重乘以 1、10、20、40，绝对值为 0.05、0.5、1、2。普通模式和退出后仍为原权重；P/G/V/O 固定 0.2/0.6/0.1/0.1，没有整体归一化或新奖励项。
 - 本轮 0.1/0.2/0.3 m **同时用于参考点后侧额外净距、出口前方偏移**；静态连通证书对墙体的中心线距离为 0.27+该额外净距。两种偏移是成对实验，未单独隔离各自影响。
 - 它们是参考点构造余量，**不是执行轨迹的实体净距下限**。采样器、1.7 s 预测、Costmap、动态碰撞、延伸禁行区、名义与制动/排队后备、未来真值门禁均保持原样。硬筛选和执行检查代码块逐字核对。

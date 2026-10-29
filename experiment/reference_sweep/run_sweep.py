@@ -1,7 +1,7 @@
 """Fixed matrix; no search expansion and no reruns. Each directory is exclusive."""
 import pathlib,json,subprocess,sys,hashlib
-from common import ROOT,metrics,rows
-BASE=ROOT.parent/'locked_reference_20261029'
+from common import ROOT,metrics,rows,previous_root
+BASE=previous_root()
 def run(name,mode,start=4.,heading=1.,margin=.1,phase='phase1'):
     folder=ROOT/'results'/phase/name;folder.mkdir(parents=True,exist_ok=False)
     original=json.loads((ROOT/'input.json').read_text())

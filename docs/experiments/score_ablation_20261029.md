@@ -81,7 +81,7 @@ G 也没有原地旋转，但累计绝对转角 **5.884 rad**，终点为 `(-.06
 
 ## 版本和可复核证据
 
-实验：`/home/user/ros2_experiments/score_ablation_20261029`，独立 `clone --no-hardlinks`；分支 `codex/score-ablation-20261029`，父提交 `5cd10fc`，生产源码基线 `f7b6a45e4d858cee15e0fce22a1bd9b90e0c8446`。
+实验：`external-evidence/score_ablation_20261029`，独立 `clone --no-hardlinks`；分支 `codex/score-ablation-20261029`，父提交 `5cd10fc`，生产源码基线 `f7b6a45e4d858cee15e0fce22a1bd9b90e0c8446`。
 
 A 的原 179 周期前缀逐个字段与上轮完全一致，入区/通过时刻精确一致；新增统一尾段观察到 14 s。原 helper、采样、预测、评分器实现、所有硬筛选保持原样；`runner.patch` 记录只有权重入口、共同观察窗口及遥测的实验工具改动。
 

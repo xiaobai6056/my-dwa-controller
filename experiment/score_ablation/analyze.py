@@ -1,10 +1,14 @@
 """Fixed-window metrics and pre-registered phase-one screening."""
+import pathlib, sys
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from paths import data_root, previous_root
+
 import pathlib,json,math,csv
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-root=pathlib.Path('/home/user/ros2_experiments/score_ablation_20261029')
+root=data_root('score_ablation_20261029')
 inp=json.loads((root/'input.json').read_text());initial=inp['initial'];walls=inp['walls']
 def first_sustained(rows,predicate,duration=.2):
     begin=None
