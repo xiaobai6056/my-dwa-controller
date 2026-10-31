@@ -40,6 +40,14 @@ public:
   // Call after update and approach admission; only risk release/reset clears this latch.
   bool latchHold(bool hold);
   void reset();
+  bool pending() const {return region_pending_;}
+  bool holding() const {return region_pending_ && stop_latched_;}
+  // Read-only view of this event on an adjacent (or already consumed) Scan.
+  // Seam fragments use the Tracker's existing adjacency distance, without rebinding.
+  std::vector<std::size_t> targetClusters(const ScanSnapshot & scan) const;
+  static bool hasOtherRisk(
+    const ScanSnapshot &, const std::vector<Pose2D> &, const Pose2D &,
+    const std::vector<std::size_t> & excluded);
 
 private:
   bool establishRegion(

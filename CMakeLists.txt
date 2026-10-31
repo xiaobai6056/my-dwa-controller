@@ -156,7 +156,18 @@ install(TARGETS scan_obstacle_tracker
 ament_export_targets(export_scan_obstacle_tracker HAS_LIBRARY_TARGET)
 ament_export_dependencies(sensor_msgs)
 
-# Stateless assessment only; it is not called by the Controller command path.
+# Source-time quasi-static evidence and causal raw-odom stop observation.
+add_library(quasi_static_observer STATIC src/quasi_static_observer.cpp)
+set_target_properties(quasi_static_observer PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_compile_features(quasi_static_observer PUBLIC cxx_std_17)
+target_include_directories(quasi_static_observer PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+install(TARGETS quasi_static_observer
+  EXPORT export_quasi_static_observer ARCHIVE DESTINATION lib)
+ament_export_targets(export_quasi_static_observer HAS_LIBRARY_TARGET)
+
+# Stateless path conflict query, reused for trusted-motion handover/re-entry checks.
 add_library(path_conflict_evaluator STATIC src/path_conflict_evaluator.cpp)
 set_target_properties(path_conflict_evaluator PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_features(path_conflict_evaluator PUBLIC cxx_std_17)
@@ -216,6 +227,9 @@ if(BUILD_TESTING)
   ament_add_gtest(test_scan_obstacle_tracker test/test_scan_obstacle_tracker.cpp)
   target_link_libraries(test_scan_obstacle_tracker scan_obstacle_tracker)
 
+  ament_add_gtest(test_quasi_static_observer test/test_quasi_static_observer.cpp)
+  target_link_libraries(test_quasi_static_observer quasi_static_observer)
+
   ament_add_gtest(test_path_conflict_evaluator test/test_path_conflict_evaluator.cpp)
   target_link_libraries(test_path_conflict_evaluator path_conflict_evaluator)
 
@@ -270,6 +284,7 @@ ament_target_dependencies(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME}
   velocity_sampler trajectory_predictor motion_predictor obstacle_evaluator trajectory_scorer path_handler
   scan_obstacle_tracker dynamic_trajectory_evaluator
+  quasi_static_observer path_conflict_evaluator
 )
 
 install(TARGETS ${PROJECT_NAME}

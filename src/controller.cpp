@@ -1,4 +1,5 @@
 #include "my_dwa_controller/controller.hpp"
+#include "my_dwa_controller/path_conflict_evaluator.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -177,6 +178,9 @@ void MyDWAController::configure(
     node->get_logger(), "Crossing yield configured: enabled=%s",
     crossing_yield_ ? "true" : "false");
   scan_topic_ = std::move(scan_topic);
+  odom_topic_ = scan_tracker_ && crossing_yield_ ?
+    readParameter(*node, "odom_topic", std::string("odom")) : "";
+  resetDynamicState();
   path_handler_ = std::move(path_handler);
   predictor_ = std::move(predictor);
   scorer_ = std::move(scorer);
@@ -248,6 +252,29 @@ void MyDWAController::activate()
         }
       });
   }
+  if (scan_tracker_ && crossing_yield_) {
+    robot_stop_ = std::make_shared<RobotStopObserver>();
+    const auto frame = costmap_ros_->getGlobalFrameID();
+    const auto base = costmap_ros_->getBaseFrameID();
+    odom_subscription_ = node->create_subscription<nav_msgs::msg::Odometry>(
+      odom_topic_, rclcpp::SensorDataQoS(),
+      [observer = std::weak_ptr<RobotStopObserver>(robot_stop_), frame, base](
+        nav_msgs::msg::Odometry::ConstSharedPtr odom) {
+        if (auto current = observer.lock()) {
+          if (odom->header.frame_id != frame ||
+          (odom->child_frame_id != base && odom->child_frame_id != "base_footprint") ||
+          odom->header.stamp.sec < 0 || odom->header.stamp.nanosec >= 1000000000u)
+          {
+            current->reset();return;
+          }
+          const auto & v = odom->twist.twist;
+          current->feed(
+            rclcpp::Time(odom->header.stamp).nanoseconds(),
+            v.linear.x, v.linear.y, v.angular.z);
+        }
+      });
+  }
+  resetDynamicState();
   active_ = true;
 }
 
@@ -255,6 +282,9 @@ void MyDWAController::deactivate()
 {
   std::lock_guard<std::mutex> lock(state_mutex_);
   active_ = false;
+  resetDynamicState();
+  odom_subscription_.reset();
+  robot_stop_.reset();
   scan_subscription_.reset();
   scan_tf_timer_.reset();
   if (scan_tracker_) {
@@ -267,6 +297,10 @@ void MyDWAController::cleanup()
 {
   std::lock_guard<std::mutex> lock(state_mutex_);
   active_ = false;
+  resetDynamicState();
+  odom_subscription_.reset();
+  robot_stop_.reset();
+  odom_topic_.clear();
   goal_phase_ = GoalPhase::Normal;
   global_plan_ = nav_msgs::msg::Path{};
   scan_subscription_.reset();
@@ -400,6 +434,96 @@ void MyDWAController::prepareGoalControl(
   }
 }
 
+void MyDWAController::resetDynamicState()
+{
+  dynamic_active_ = true;
+  handoff_stamp_ = last_control_time_ = 0;
+  quasi_static_.reset();
+  if (robot_stop_) {robot_stop_->reset();}
+  if (crossing_yield_) {crossing_yield_->reset();}
+}
+
+bool MyDWAController::hasMotionRisk(
+  const ScanSnapshot & scan, const ControlInputs & inputs, const rclcpp::Time & now,
+  const std::vector<std::size_t> & excluded) const
+{
+  ScanSnapshot moving;
+  moving.stamp = scan.stamp;moving.frame_id = scan.frame_id;
+  for (std::size_t i = 0; i < scan.obstacles.size(); ++i) {
+    const auto & o = scan.obstacles[i];
+    if (std::find(excluded.begin(), excluded.end(), i) != excluded.end()) {continue;}
+    if (o.velocity_valid && o.previous_cluster_index >= 0 &&
+      std::isfinite(o.vx) && std::isfinite(o.vy) && std::hypot(o.vx, o.vy) >= .05)
+    {
+      moving.obstacles.push_back(o);
+    }
+  }
+  if (moving.obstacles.empty()) {return false;}
+  const double radius = costmap_ros_->getUseRadius() ? costmap_ros_->getRobotRadius() :
+    costmap_ros_->getLayeredCostmap()->getCircumscribedRadius();
+  const PathConflictEvaluator risk(radius, .05, sim_time_, predictor_->step(), .35);
+  const auto result = risk.evaluate(
+    &moving, inputs.local_path, inputs.initial,
+    costmap_ros_->getGlobalFrameID(), now, sampling_config_.max_v);
+  return result.valid && result.conflict_distance.has_value();
+}
+
+void MyDWAController::updateDynamicMode(
+  const ScanSnapshot * scan, const ControlInputs & inputs, const rclcpp::Time & now)
+{
+  if (last_control_time_ && now.nanoseconds() < last_control_time_) {resetDynamicState();}
+  last_control_time_ = now.nanoseconds();
+  if (!scan || scan->frame_id != costmap_ros_->getGlobalFrameID()) {
+    quasi_static_.reset();return;
+  }
+  const auto stamp = rclcpp::Time(scan->stamp).nanoseconds();
+  if (stamp <= 0 || now.nanoseconds() < stamp || now.nanoseconds() - stamp > 350000000) {
+    quasi_static_.reset();return;
+  }
+  if (!dynamic_active_ && stamp > handoff_stamp_ && hasMotionRisk(*scan, inputs, now)) {
+    resetDynamicState();
+    last_control_time_ = now.nanoseconds();
+    RCLCPP_INFO(
+      node_.lock()->get_logger(),
+      "Global handoff: {\"transition\":\"dynamic\",\"reason\":\"trusted_path_motion\",\"source\":%ld,\"now\":%ld}",
+      stamp, now.nanoseconds());
+  }
+  if (!dynamic_active_ || !crossing_yield_ || !crossing_yield_->holding()) {
+    quasi_static_.reset();return;
+  }
+  const auto members = crossing_yield_->targetClusters(*scan);
+  if (members.empty()) {quasi_static_.reset();return;}
+  // Like the experiment, wait for odom to cover this Scan, then query causally.
+  if (!robot_stop_ || !robot_stop_->covers(stamp)) {return;}
+  std::vector<Point> points;
+  bool associated = true, moving = false;
+  for (auto i : members) {
+    const auto & o = scan->obstacles[i];
+    associated = associated && o.previous_cluster_index >= 0;
+    moving = moving || (o.velocity_valid && std::hypot(o.vx, o.vy) >= .05);
+    points.insert(points.end(), o.points.begin(), o.points.end());
+  }
+  const bool stopped = robot_stop_->stoppedAt(stamp, now.nanoseconds());
+  const auto result = quasi_static_.update(
+    stamp,
+    now.nanoseconds(), points, associated, stopped, moving);
+  RCLCPP_DEBUG(
+    node_.lock()->get_logger(),
+    "M observation: {\"source\":%ld,\"now\":%ld,\"frames\":%zu,\"span_ns\":%ld,\"diameter\":%.12g,\"permission\":%s,\"stopped\":%s,\"reason\":\"%s\"}",
+    stamp, now.nanoseconds(), result.frames, result.span_ns, result.diameter,
+    result.permission ? "true" : "false", stopped ? "true" : "false", result.reason);
+  if (!result.permission || hasMotionRisk(*scan, inputs, now, members) ||
+    CrossingYield::hasOtherRisk(*scan, inputs.local_path, inputs.initial, members)) {return;}
+  dynamic_active_ = false;
+  handoff_stamp_ = stamp;
+  crossing_yield_->reset();
+  quasi_static_.reset();
+  RCLCPP_INFO(
+    node_.lock()->get_logger(),
+    "Global handoff: {\"transition\":\"static\",\"reason\":\"median_static\",\"source\":%ld,\"now\":%ld}",
+    stamp, now.nanoseconds());
+}
+
 bool MyDWAController::isGoalCandidateAllowed(
   const Velocity2D & candidate, const ControlInputs & inputs,
   const GoalControlContext & goal) const
@@ -495,9 +619,11 @@ Velocity2D MyDWAController::selectBestCandidate(
   for (const auto & c : feasible) {
     queries.push_back(&c.backup);
   }
+  updateDynamicMode(scan.get(), inputs, now);
+  auto * active_filter = dynamic_active_ ? dynamic_filter_.get() : nullptr;
   PreparedFilter prepared;
-  if (dynamic_filter_) {
-    prepared = dynamic_filter_->prepare(queries, scan.get(), costmap_ros_->getGlobalFrameID(), now);
+  if (active_filter) {
+    prepared = active_filter->prepare(queries, scan.get(), costmap_ros_->getGlobalFrameID(), now);
   }
   std::optional<std::size_t> best;
   double best_score = std::numeric_limits<double>::infinity();
@@ -508,11 +634,11 @@ Velocity2D MyDWAController::selectBestCandidate(
   for (std::size_t i = 0; i < feasible.size(); ++i) {
     const auto & c = feasible[i];
     const auto risk =
-      dynamic_filter_ ? dynamic_filter_->evaluate(c.backup, prepared) : FilterResult{};
-    if (dynamic_filter_ && !risk.available) {++unavailable_rejected; continue;}
-    if (dynamic_filter_ &&
-      (dynamic_filter_->observedGeometryCollision(c.nominal, prepared) ||
-      dynamic_filter_->observedGeometryCollision(c.backup, prepared)))
+      active_filter ? active_filter->evaluate(c.backup, prepared) : FilterResult{};
+    if (active_filter && !risk.available) {++unavailable_rejected; continue;}
+    if (active_filter &&
+      (active_filter->observedGeometryCollision(c.nominal, prepared) ||
+      active_filter->observedGeometryCollision(c.backup, prepared)))
     {
       ++geometry_rejected;
       continue;
@@ -535,22 +661,23 @@ Velocity2D MyDWAController::selectBestCandidate(
     }
     if (prefer) {best = i; best_score = score; selected_clearance = risk.min_clearance;}
   }
-  const auto fallback_risk = dynamic_filter_ ?
-    dynamic_filter_->evaluate(fallback.trajectory, prepared) : FilterResult{};
-  const bool fallback_geometry_collision = dynamic_filter_ &&
-    dynamic_filter_->observedGeometryCollision(fallback.trajectory, prepared);
+  const auto fallback_risk = active_filter ?
+    active_filter->evaluate(fallback.trajectory, prepared) : FilterResult{};
+  const bool fallback_geometry_collision = active_filter &&
+    active_filter->observedGeometryCollision(fallback.trajectory, prepared);
   const bool fallback_complete = fallback.stop_time <= sim_time_;
   const bool emergency = !best && (!fallback_static_clear || !fallback_complete ||
-    (dynamic_filter_ && (!fallback_risk.available ||
+    (active_filter && (!fallback_risk.available ||
     !fallback_risk.conflicts.empty() || fallback_geometry_collision)));
   const auto dwa_candidate = best ? feasible[*best].nominal.command : Velocity2D{0, 0};
   auto output_command = dwa_candidate;
-  if (crossing_yield_) {
+  if (crossing_yield_ && dynamic_active_) {
     auto y = crossing_yield_->update(
       scan.get(), inputs.local_path, inputs.initial, inputs.current, fallback.trajectory,
       now.nanoseconds(), best.has_value());
+    if (y.triggered || y.released) {quasi_static_.reset();}
     if (y.hold && best && fallback_complete && fallback_static_clear &&
-      (!dynamic_filter_ || (fallback_risk.available && fallback_risk.conflicts.empty() &&
+      (!active_filter || (fallback_risk.available && fallback_risk.conflicts.empty() &&
       !fallback_geometry_collision)))
     {
       const auto & selected = feasible[*best];
@@ -575,6 +702,7 @@ Velocity2D MyDWAController::selectBestCandidate(
   out << std::setprecision(17) << std::boolalpha
       << "{\"cycle\":" << diagnostic_cycle_ << ",\"now_ns\":" << now.nanoseconds()
       << ",\"scan_ns\":" << (scan ? rclcpp::Time(scan->stamp).nanoseconds() : 0)
+      << ",\"global_dynamic_active\":" << dynamic_active_
       << ",\"known_input_available\":" << prepared.input.input_available
       << ",\"evidence_state\":" << std::quoted(state)
       << ",\"input_reason\":" << std::quoted(prepared.input.reason)

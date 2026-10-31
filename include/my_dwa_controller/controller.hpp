@@ -11,6 +11,8 @@
 #include "nav2_core/controller.hpp"
 #include "rclcpp/subscription.hpp"
 #include "nav_msgs/msg/path.hpp"
+#include "nav_msgs/msg/odometry.hpp"
+#include "my_dwa_controller/quasi_static_observer.hpp"
 #include "my_dwa_controller/dynamic_filter.hpp"
 #include "my_dwa_controller/motion_predictor.hpp"
 #include "my_dwa_controller/path_handler.hpp"
@@ -85,6 +87,13 @@ private:
   Velocity2D selectBestCandidate(
     const ControlInputs & inputs, const GoalControlContext & goal,
     const std::vector<Velocity2D> & candidates);
+  void resetDynamicState();
+  bool hasMotionRisk(
+    const ScanSnapshot & scan, const ControlInputs & inputs, const rclcpp::Time & now,
+    const std::vector<std::size_t> & excluded = {}) const;
+  void updateDynamicMode(
+    const ScanSnapshot * scan, const ControlInputs & inputs,
+    const rclcpp::Time & now);
 
   // 状态锁串行保护路径、配置、限速和生命周期；不与地图锁反向嵌套。
   std::mutex state_mutex_;
@@ -111,6 +120,12 @@ private:
   std::unique_ptr<MotionPredictor> predictor_;
   std::unique_ptr<DynamicFilter> dynamic_filter_;
   std::unique_ptr<CrossingYield> crossing_yield_;
+  QuasiStaticObserver quasi_static_;
+  std::shared_ptr<RobotStopObserver> robot_stop_;
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscription_;
+  std::string odom_topic_;
+  bool dynamic_active_ = true;
+  int64_t handoff_stamp_ = 0, last_control_time_ = 0;
   std::unique_ptr<TrajectoryScorer> scorer_;
   bool active_ = false;
 

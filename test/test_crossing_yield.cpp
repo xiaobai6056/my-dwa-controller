@@ -64,6 +64,46 @@ TEST_F(YieldTest, ResetClearsIntent) {
   trigger();policy.reset();auto s = frame(2);EXPECT_FALSE(step(s).hold);
 }
 
+TEST_F(YieldTest, TargetViewFollowsAdjacentAssociationAndJoinsOnlyScanSeam)
+{
+  auto s = frame(1);
+  s.obstacles = {actor()};
+  ASSERT_TRUE(step(s).triggered);
+  s = frame(1.2);
+  s.previous_stamp_ns = 1000000000;
+  auto left = actor();
+  left.previous_cluster_index = 0;
+  left.first_beam = 0;
+  left.last_beam = 1;
+  left.points = {{{1.5, 0}}, {{1.5, .01}}, {{1.5, .02}}};
+  auto right = left;
+  right.first_beam = 358;
+  right.last_beam = 359;
+  right.previous_cluster_index = -1;
+  right.points = {{{1.5, -.02}}, {{1.5, -.01}}, {{1.5, 0}}};
+  s.obstacles = {left, right};
+  const auto view = policy.targetClusters(s);
+  EXPECT_EQ(view, (std::vector<std::size_t>{0, 1}));
+  EXPECT_TRUE(policy.pending());
+  s.obstacles.back().last_beam = 358;
+  EXPECT_EQ(policy.targetClusters(s), (std::vector<std::size_t>{0}));
+  s.previous_stamp_ns = 1100000000;
+  EXPECT_TRUE(policy.targetClusters(s).empty());
+  policy.reset();
+  EXPECT_TRUE(policy.targetClusters(s).empty());
+}
+
+TEST_F(YieldTest, OtherRiskQueryUsesExistingCrossingEvidenceWithoutLatching)
+{
+  auto s = frame(1);
+  s.obstacles = {actor(), actor()};
+  EXPECT_TRUE(CrossingYield::hasOtherRisk(s, path, pose(.5), {0}));
+  EXPECT_FALSE(CrossingYield::hasOtherRisk(s, path, pose(.5), {0, 1}));
+  EXPECT_FALSE(policy.pending());
+  s.obstacles.back().partial_motion_rank = 0;
+  EXPECT_FALSE(CrossingYield::hasOtherRisk(s, path, pose(.5), {0}));
+}
+
 TEST_F(YieldTest, AssociationExtendsUnionWithoutFullOrPartialVelocity)
 {
   trigger();

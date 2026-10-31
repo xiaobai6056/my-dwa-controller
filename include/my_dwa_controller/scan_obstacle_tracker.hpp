@@ -29,6 +29,8 @@ struct ObstacleObservation
   // Original valid beam points in scan order, transformed once into the
   // enclosing ScanSnapshot frame at its source stamp. No fitted/filled shape.
   std::vector<std::array<double, 2>> points;
+  // Source beam bounds; metadata only, without changing the cluster or its motion.
+  std::size_t first_beam = 0, last_beam = 0;
   // Independent partial surface evidence in this snapshot's frame (m/s).
   // rank 0 means unusable; rank 1 constrains one direction only; rank 2 spans 2D.
   // The vector is the observable projection, not a complete velocity. Missing
@@ -53,6 +55,7 @@ struct ScanSnapshot
   std::array<double, 3> laser_pose{};
   std::vector<float> ranges;
   double angle_min = 0, angle_increment = 0, range_min = 0, range_max = 0;
+  double cluster_distance = 0.12;
 };
 
 // Serializes a single scan stream; returned snapshots are immutable.

@@ -30,12 +30,15 @@ std::optional<std::vector<ObstacleObservation>> clusterScan(
   ObstacleAabb bounds;
   std::vector<std::array<double, 2>> points;
   std::size_t count = 0;
+  std::size_t first_beam = 0, last_beam = 0;
   double previous_x = 0.0, previous_y = 0.0;
   const auto finish_cluster = [&]() {
       if (count >= min_points) {
         ObstacleObservation observation;
         observation.aabb = bounds;
         observation.points = std::move(points);
+        observation.first_beam = first_beam;
+        observation.last_beam = last_beam;
         obstacles.push_back(std::move(observation));
       }
       count = 0;
@@ -58,6 +61,7 @@ std::optional<std::vector<ObstacleObservation>> clusterScan(
       return std::nullopt;
     }
     if (count == 0) {
+      first_beam = i;
       bounds = {point.x(), point.x(), point.y(), point.y()};
     } else {
       bounds.min_x = std::min(bounds.min_x, point.x());
@@ -66,6 +70,7 @@ std::optional<std::vector<ObstacleObservation>> clusterScan(
       bounds.max_y = std::max(bounds.max_y, point.y());
     }
     points.push_back({point.x(), point.y()});
+    last_beam = i;
     previous_x = x;
     previous_y = y;
     ++count;
@@ -308,6 +313,7 @@ void ScanObstacleTracker::updateLocked(
   snapshot->ranges = scan.ranges;snapshot->angle_min = scan.angle_min;
   snapshot->angle_increment = scan.angle_increment;
   snapshot->range_min = scan.range_min;snapshot->range_max = scan.range_max;
+  snapshot->cluster_distance = cluster_distance_;
   snapshot->frame_id = target_frame;
   snapshot->obstacles = std::move(*obstacles);
   snapshot_ = std::move(snapshot);

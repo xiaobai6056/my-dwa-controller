@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <optional>
 
 namespace my_dwa_controller
 {
@@ -62,6 +63,37 @@ bool CrossingYield::latchHold(bool hold)
 
 void CrossingYield::reset() {*this = CrossingYield{};}
 
+std::vector<std::size_t> CrossingYield::targetClusters(const ScanSnapshot & scan) const
+{
+  if (!region_pending_ || cluster_index_ < 0) {return {};}
+  const int64_t stamp = int64_t(scan.stamp.sec) * 1000000000 + scan.stamp.nanosec;
+  int index = -1;
+  if (stamp == last_stamp_) {
+    index = cluster_index_;
+  } else if (stamp > last_stamp_ && scan.previous_stamp_ns == last_stamp_) {
+    for (std::size_t i = 0; i < scan.obstacles.size(); ++i) {
+      if (scan.obstacles[i].previous_cluster_index == cluster_index_) {index = i;break;}
+    }
+  }
+  if (index < 0 || std::size_t(index) >= scan.obstacles.size()) {return {};}
+  std::vector<std::size_t> result{std::size_t(index)};
+  if (scan.obstacles.size() > 1 && !scan.ranges.empty() &&
+    (index == 0 || std::size_t(index) == scan.obstacles.size() - 1))
+  {
+    const auto & first = scan.obstacles.front();
+    const auto & last = scan.obstacles.back();
+    if (first.first_beam == 0 && last.last_beam == scan.ranges.size() - 1 &&
+      !first.points.empty() && !last.points.empty() &&
+      std::hypot(
+        first.points.front()[0] - last.points.back()[0],
+        first.points.front()[1] - last.points.back()[1]) <= scan.cluster_distance)
+    {
+      result = {0, scan.obstacles.size() - 1};
+    }
+  }
+  return result;
+}
+
 void CrossingYield::fillDecision(
   YieldDecision & result, const std::vector<Pose2D> &, const Trajectory & brake) const
 {
@@ -79,16 +111,22 @@ void CrossingYield::fillDecision(
   result.safe_stop = !brake.poses.empty() && result.margin > 0;
 }
 
-bool CrossingYield::establishRegion(
-  const ScanSnapshot & scan, const std::vector<Pose2D> & path, const Pose2D & robot)
+namespace
 {
+// The original crossing predicate, shared by admission and the handover veto.
+std::optional<std::size_t> crossingCluster(
+  const ScanSnapshot & scan, const std::vector<Pose2D> & path, const Pose2D & robot,
+  const std::vector<std::size_t> & excluded)
+{
+  if (path.size() < 2) {return std::nullopt;}
   const auto & a = path.front();
   const auto & b = path.back();
   const double length = std::hypot(b.x - a.x, b.y - a.y);
-  if (!(length > .1)) {return false;}
+  if (!(length > .1)) {return std::nullopt;}
   const double tx = (b.x - a.x) / length, ty = (b.y - a.y) / length;
   const double nx = -ty, ny = tx;
-  for (size_t i = 0; i < scan.obstacles.size(); ++i) {
+  for (std::size_t i = 0; i < scan.obstacles.size(); ++i) {
+    if (std::find(excluded.begin(), excluded.end(), i) != excluded.end()) {continue;}
     const auto & o = scan.obstacles[i];
     if (o.partial_motion_rank <= 0 || o.points.empty()) {continue;}
     double cx = 0, cy = 0;
@@ -105,16 +143,43 @@ bool CrossingYield::establishRegion(
       const double q = p[0] * tx + p[1] * ty;
       low = std::min(low, q);high = std::max(high, q);
     }
-    const double robot_s = robot.x * tx + robot.y * ty, path_end = b.x * tx + b.y * ty;
-    if (high + .27 < robot_s || low - .27 > path_end) {continue;}
-    region_pending_ = true;ever_occupied_ = false;clear_scans_ = 0;
-    empty_duration_ns_ = 0;last_empty_stamp_ = 0;
-    evidence_rank_ = o.partial_motion_rank;cluster_index_ = i;
-    tangent_x_ = tx;tangent_y_ = ty;normal_x_ = nx;normal_y_ = ny;
-    path_normal_center_ = a.x * nx + a.y * ny;region_low_ = low;region_high_ = high;
-    return true;
+    if (high + .27 < robot.x * tx + robot.y * ty || low - .27 > b.x * tx + b.y * ty) {
+      continue;
+    }
+    return i;
   }
-  return false;
+  return std::nullopt;
+}
+}  // namespace
+
+bool CrossingYield::hasOtherRisk(
+  const ScanSnapshot & scan, const std::vector<Pose2D> & path, const Pose2D & robot,
+  const std::vector<std::size_t> & excluded)
+{
+  return crossingCluster(scan, path, robot, excluded).has_value();
+}
+
+bool CrossingYield::establishRegion(
+  const ScanSnapshot & scan, const std::vector<Pose2D> & path, const Pose2D & robot)
+{
+  const auto index = crossingCluster(scan, path, robot, {});
+  if (!index) {return false;}
+  const auto & a = path.front();
+  const auto & b = path.back();
+  const double length = std::hypot(b.x - a.x, b.y - a.y);
+  const double tx = (b.x - a.x) / length, ty = (b.y - a.y) / length;
+  double low = std::numeric_limits<double>::infinity(), high = -low;
+  const auto & o = scan.obstacles[*index];
+  for (const auto & p : o.points) {
+    const double q = p[0] * tx + p[1] * ty;
+    low = std::min(low, q);high = std::max(high, q);
+  }
+  region_pending_ = true;ever_occupied_ = false;clear_scans_ = 0;
+  empty_duration_ns_ = 0;last_empty_stamp_ = 0;
+  evidence_rank_ = o.partial_motion_rank;cluster_index_ = *index;
+  tangent_x_ = tx;tangent_y_ = ty;normal_x_ = -ty;normal_y_ = tx;
+  path_normal_center_ = -a.x * ty + a.y * tx;region_low_ = low;region_high_ = high;
+  return true;
 }
 
 void CrossingYield::extendRegion(const ScanSnapshot & scan, int64_t previous_consumed_stamp)

@@ -14,6 +14,7 @@
 #include "my_dwa_controller/controller.hpp"
 #include "my_dwa_controller/dynamic_risk_evaluator.hpp"
 #include "nav2_core/exceptions.hpp"
+#include "nav_msgs/msg/odometry.hpp"
 #include "nav2_costmap_2d/cost_values.hpp"
 #include "rcl/time.h"
 #include "rcutils/logging.h"
@@ -1085,6 +1086,103 @@ TEST_F(ControllerDynamicTest, OrdinarySetPlanCannotUnlockLatchedRisk)
   EXPECT_DOUBLE_EQ(decide().twist.angular.z, 0);
   expectDiagnostic("\"hold\":true");
   expectDiagnostic("\"released\":false");
+}
+
+class ControllerMedianTest : public ControllerDynamicTest
+{
+protected:
+  void configureMedian()
+  {
+    node->declare_parameter("FollowPath.crossing_yield.enabled", true);
+    node->declare_parameter("odom_topic", "/v3_m_odom");
+    odometry = publisher_node->create_publisher<nav_msgs::msg::Odometry>(
+      "/v3_m_odom", rclcpp::SensorDataQoS());
+    configureDecision();
+    ASSERT_TRUE(waitFor([&]() {return odometry->get_subscription_count() == 1u;}));
+    observeNarrowCrossing();
+    EXPECT_DOUBLE_EQ(decide().twist.linear.x, 0);
+  }
+
+  void stationaryScan(int64_t stamp, bool raw_odom)
+  {
+    setTime(stamp);
+    if (raw_odom) {
+      for (const int64_t t : std::vector<int64_t>{stamp - 100000000LL, stamp}) {
+        nav_msgs::msg::Odometry message;
+        message.header.frame_id = "perception_world";
+        message.child_frame_id = "perception_base";
+        message.header.stamp = rclcpp::Time(t);
+        odometry->publish(message);
+      }
+    }
+    auto scan = cornerScan(stamp, "perception_world", .8, .8);
+    scan.ranges = std::vector<float>(scan.ranges.begin() + 40, scan.ranges.begin() + 101);
+    scan.angle_min += 40 * scan.angle_increment;
+    publisher->publish(scan);
+    ASSERT_TRUE(
+      waitFor(
+        [&]() {
+          auto s = controller.getScanSnapshot();
+          return s && rclcpp::Time(s->stamp).nanoseconds() == stamp;
+        }));
+    executor.spin_some();
+  }
+
+  void settleAndHandoff()
+  {
+    const auto start = node->now().nanoseconds();
+    for (int k = 1; k <= 16; ++k) {
+      stationaryScan(start + k * 200000000LL, true);
+      (void)decide();
+    }
+    expectDiagnostic("\"global_dynamic_active\":false");
+  }
+  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odometry;
+};
+
+TEST_F(ControllerMedianTest, ZeroPlanningVelocityWithoutRawOdomCannotPermitM)
+{
+  configureMedian();
+  const auto start = node->now().nanoseconds();
+  for (int k = 1; k <= 16; ++k) {
+    stationaryScan(start + k * 200000000LL, false);
+    EXPECT_DOUBLE_EQ(decide().twist.linear.x, 0);
+  }
+  expectDiagnostic("\"global_dynamic_active\":true");
+}
+
+TEST_F(ControllerMedianTest, MedianHandoffClearsYieldAndBypassesAllDynamicConsumers)
+{
+  configureMedian();
+  settleAndHandoff();
+  EXPECT_GT(decide().twist.linear.x, 0);
+  EXPECT_EQ(diagnostics.find("Crossing yield:"), std::string::npos);
+  // A fresh unknown cluster would block the original dynamic geometry filter.
+  setTime(node->now().nanoseconds() + 200000000LL);
+  publishGeometry(node->now().nanoseconds(), .18, .18);
+  EXPECT_GT(decide().twist.linear.x, 0);
+  expectDiagnostic("\"geometry_rejected\":0");
+  expectDiagnostic("\"global_dynamic_active\":false");
+  setPlan();  // A same-task replan must not restore the consumed old event.
+  EXPECT_GT(decide().twist.linear.x, 0);
+  auto * map = costmap->getCostmap();
+  std::fill(
+    map->getCharMap(), map->getCharMap() + 120 * 120,
+    nav2_costmap_2d::LETHAL_OBSTACLE);
+  EXPECT_DOUBLE_EQ(decide().twist.linear.x, 0);
+  expectDiagnostic("\"fallback_static_clear\":false");
+}
+
+TEST_F(ControllerMedianTest, OnlyNewTrustedPathMotionRestoresDynamicProcessing)
+{
+  configureMedian();
+  settleAndHandoff();
+  (void)decide();
+  expectDiagnostic("\"global_dynamic_active\":false");
+  observe(.66, .4, 0, -.4);
+  (void)decide();
+  expectDiagnostic("\"global_dynamic_active\":true");
+  expectDiagnostic("\"transition\":\"dynamic\"");
 }
 
 }  // namespace
