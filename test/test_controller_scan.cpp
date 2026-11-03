@@ -12,7 +12,6 @@
 #include <thread>
 
 #include "my_dwa_controller/controller.hpp"
-#include "my_dwa_controller/dynamic_risk_evaluator.hpp"
 #include "nav2_core/exceptions.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "nav2_costmap_2d/cost_values.hpp"
@@ -178,9 +177,9 @@ TEST_F(ControllerScanTest, ActiveSubscriptionMovesFromUnavailableToObservedGeome
   EXPECT_EQ(first->frame_id, "perception_world");
   EXPECT_FALSE(first->obstacles[0].velocity_valid);
   const auto after = command();
-  EXPECT_DOUBLE_EQ(before.twist.linear.x, 0.0);
+  EXPECT_GT(before.twist.linear.x, 0.0);
   EXPECT_DOUBLE_EQ(before.twist.angular.z, 0.0);
-  EXPECT_GT(after.twist.linear.x, 0.0);
+  EXPECT_DOUBLE_EQ(after.twist.linear.x, before.twist.linear.x);
   publish(1200000000LL);
   ASSERT_TRUE(
     waitFor(
@@ -375,7 +374,6 @@ protected:
     ASSERT_EQ(latest->obstacles[0].velocity_valid, known);
   }
 
-
   void observeNarrowCrossing()
   {
     // Crop the two faces so the cached crossing lies ahead of the robot.
@@ -415,60 +413,6 @@ protected:
   void expectDiagnostic(const std::string & text)
   {
     EXPECT_NE(diagnostics.find(text), std::string::npos) << diagnostics;
-  }
-
-  double riskCost(const Velocity2D & candidate)
-  {
-    const auto snapshot = controller.getScanSnapshot();
-    const auto trajectory = TrajectoryPredictor(1.0, 0.5).predict(Pose2D{}, candidate);
-    DynamicRiskEvaluator evaluator(costmap->getRobotRadius(), 0.05, 1.0, 0.5, 0.35);
-    const auto prepared = evaluator.prepare(
-      {&trajectory}, snapshot.get(),
-      "perception_world", node->now(), false);
-    const auto result = evaluator.evaluate(trajectory, prepared);
-    EXPECT_TRUE(result.input_available);
-    return result.cost;
-  }
-
-  void expectFilteredWinner(const geometry_msgs::msg::TwistStamped & selected)
-  {
-    const MotionPredictor predictor({1.0, 2.0, 0.0, 1.0, 0.5});
-    const TrajectoryScorer scorer(0.4, {0.5, 0.1, 0.2, 0.2, 0.0}, 1.0, 0.5, 1.0);
-    std::vector<Pose2D> path(2);
-    path.back().x = 1.0;
-    double best = std::numeric_limits<double>::infinity();
-    Velocity2D expected{};
-    for (const auto & candidate : candidates()) {
-      const auto trajectory = predictor.predict(Pose2D{}, {0, 0}, candidate, 1.0).trajectory;
-      const auto backup = predictor.predict(Pose2D{}, {0, 0}, candidate, 0.5);
-      if (backup.stop_time > 1.0) {continue;}
-      DynamicTrajectoryEvaluator evaluator(costmap->getRobotRadius(), 0.05, 1.0, 0.5, 0.35);
-      const auto snapshot = controller.getScanSnapshot();
-      const auto dynamic = evaluator.evaluate(
-        backup.trajectory,
-        snapshot.get(), "perception_world", node->now());
-      if (dynamic.collision) {continue;}
-      const double cost = scorer.score(trajectory, path, 0.0).total_cost;
-      if (cost < best || (cost == best && std::abs(candidate.omega) < std::abs(expected.omega))) {
-        best = cost;
-        expected = candidate;
-      }
-    }
-    EXPECT_DOUBLE_EQ(selected.twist.linear.x, expected.v);
-    EXPECT_DOUBLE_EQ(selected.twist.angular.z, expected.omega);
-  }
-
-  std::vector<Velocity2D> candidates()
-  {
-    SamplingConfig config;
-    config.max_v = 0.4;
-    config.max_w = 1.0;
-    config.acc_v = 1.0;
-    config.acc_w = 2.0;
-    config.control_dt = 0.5;
-    config.v_samples = 3;
-    config.w_samples = 3;
-    return sampleVelocities({0.0, 0.0}, config);
   }
 
   void setWall(unsigned char value)
@@ -521,36 +465,14 @@ TEST_F(ControllerDynamicTest, DefaultDisabledKeepsOriginalCommand)
 
 }
 
-TEST_F(ControllerDynamicTest, MissingScanRejectsNormalCandidatesAndMarksZeroEmergency)
+TEST_F(ControllerDynamicTest, MissingScanKeepsCostmapFeasibleCandidates)
 {
   configureDecision();
   const auto selected = decide();
-  EXPECT_DOUBLE_EQ(selected.twist.linear.x, 0.0);
+  EXPECT_DOUBLE_EQ(selected.twist.linear.x, 0.4);
   EXPECT_DOUBLE_EQ(selected.twist.angular.z, 0.0);
-  expectDiagnostic("\"evidence_state\":\"unavailable\"");
-  expectDiagnostic("\"mode\":\"emergency\"");
-  expectDiagnostic("\"accepted\":0");
-  expectDiagnostic("\"fallback_dynamic_available\":false");
-}
-
-TEST_F(ControllerDynamicTest, CrossingEvidenceFiltersBeforeOriginalScoring)
-{
-  configureDecision();
-  observe(0.66, 0.4, 0.0, -0.4);
-  const auto selected = decide();
-  expectFilteredWinner(selected);
-  expectDiagnostic("\"known_input_available\":true");
-
-  expectDiagnostic("\"accepted\"");
-}
-
-TEST_F(ControllerDynamicTest, KnownRiskFilteringDoesNotRequireHistoryState)
-{
-  configureDecision();
-  observe(0.66, 0.4, 0.0, -0.4);
-  const auto selected = decide();
-  expectFilteredWinner(selected);
-  expectDiagnostic("\"dynamic_rejected\":9");
+  expectDiagnostic("\"mode\":\"navigate\"");
+  expectDiagnostic("\"accepted\":9");
 }
 
 TEST_F(ControllerDynamicTest, FarEvidenceKeepsOriginalScoring)
@@ -560,105 +482,29 @@ TEST_F(ControllerDynamicTest, FarEvidenceKeepsOriginalScoring)
   const auto selected = decide();
   EXPECT_DOUBLE_EQ(selected.twist.linear.x, 0.4);
   EXPECT_DOUBLE_EQ(selected.twist.angular.z, 0.0);
-  expectDiagnostic("\"retained_points\":0");
 }
 
-TEST_F(ControllerDynamicTest, AllKnownConflictsProduceBrakingAction)
-{
-  configureDecision();
-  observe(0.18, 0.18);
-  const auto selected = decide();
-  for (const auto & candidate : candidates()) {
-    EXPECT_GT(riskCost(candidate), 0.0);
-  }
-  expectFilteredWinner(selected);
-  expectDiagnostic("\"mode\":\"emergency\"");
-}
-
-TEST_F(ControllerDynamicTest, EmptyAndUnknownScansSupplyNoPredictionPenalty)
+TEST_F(ControllerDynamicTest, EmptyAndUnknownScansKeepCostmapFeasibleCommand)
 {
   configureDecision();
   setTime(2400000000LL);
   publishGeometry(node->now().nanoseconds(), 1.0, 1.0, true);
   auto selected = decide();
   EXPECT_DOUBLE_EQ(selected.twist.linear.x, 0.4);
-  expectDiagnostic("\"known\":0");
   observe(0.66, 0.4, 0.0, 0.0, false);
   selected = decide();
   EXPECT_DOUBLE_EQ(selected.twist.linear.x, 0.4);
   EXPECT_DOUBLE_EQ(selected.twist.angular.z, 0.0);
-  expectDiagnostic("\"unknown\":1");
   EXPECT_EQ(controller.getScanSnapshot()->obstacles[0].points.size(), 141u);
 }
 
-
-TEST_F(ControllerDynamicTest, UnknownNearGeometryRejectsEvenWithFreeCostmap)
-{
-  configureDecision();
-  observe(0.18, 0.18, 0.0, 0.0, false);
-  const auto selected = decide();
-  EXPECT_DOUBLE_EQ(selected.twist.linear.x, 0.0);
-  EXPECT_DOUBLE_EQ(selected.twist.angular.z, 0.0);
-  expectDiagnostic("\"evidence_state\":\"partial\"");
-  expectDiagnostic("\"geometry_rejected\":9");
-  expectDiagnostic("\"dynamic_rejected\":0");
-  expectDiagnostic("\"fallback_geometry_collision\":true");
-  expectDiagnostic("\"mode\":\"emergency\"");
-}
-
-TEST_F(ControllerDynamicTest, UnknownNominalGeometryIsCheckedBeyondClearBackup)
-{
-  configureDecision();
-  // A narrow measured wall slice: the forward nominal reaches radius+margin,
-  // while its stopping backup remains short of it. Costmap stays entirely free.
-  const auto stamp = node->now().nanoseconds();
-  auto scan = cornerScan(stamp, "perception_world");
-  scan.angle_min = -0.01;
-  scan.ranges = {static_cast<float>(0.55 / std::cos(-0.01)), 0.55F,
-    static_cast<float>(0.55 / std::cos(0.01))};
-  publisher->publish(scan);
-  ASSERT_TRUE(waitFor([&]() {return static_cast<bool>(controller.getScanSnapshot());}));
-  ASSERT_EQ(controller.getScanSnapshot()->obstacles.size(), 1u);
-  ASSERT_FALSE(controller.getScanSnapshot()->obstacles[0].velocity_valid);
-  const auto selected = decide();
-  EXPECT_FALSE(selected.twist.linear.x == 0.4 && selected.twist.angular.z == 0.0);
-  expectDiagnostic("\"geometry_rejected\":1");
-  expectDiagnostic("\"fallback_geometry_collision\":false");
-  expectDiagnostic("\"evidence_state\":\"partial\"");
-}
-
-TEST_F(ControllerDynamicTest, UnknownBrakingOccupancyMakesZeroFallbackEmergency)
-{
-  configureDecision();
-  const auto stamp = node->now().nanoseconds();
-  auto scan = cornerScan(stamp, "perception_world");
-  scan.angle_min = -0.01;
-  scan.ranges = {static_cast<float>(0.31 / std::cos(-0.01)), 0.31F,
-    static_cast<float>(0.31 / std::cos(0.01))};
-  publisher->publish(scan);
-  ASSERT_TRUE(waitFor([&]() {return static_cast<bool>(controller.getScanSnapshot());}));
-  geometry_msgs::msg::Twist current;
-  current.linear.x = 0.4;
-  const auto selected = decide(current);
-  EXPECT_DOUBLE_EQ(selected.twist.linear.x, 0.0);
-  EXPECT_DOUBLE_EQ(selected.twist.angular.z, 0.0);
-  // The initial pose is clear (0.31 > 0.22+0.05), but the physical braking
-  // sweep reaches the snapshot. A zero target cannot certify a collision-free stop.
-  expectDiagnostic("\"fallback_static_clear\":true");
-  expectDiagnostic("\"fallback_complete\":true");
-  expectDiagnostic("\"fallback_geometry_collision\":true");
-  expectDiagnostic("\"mode\":\"emergency\"");
-}
-
-TEST_F(ControllerDynamicTest, FarUnknownGeometryKeepsOriginalScoringAndPartialEvidence)
+TEST_F(ControllerDynamicTest, FarUnknownGeometryKeepsOriginalScoring)
 {
   configureDecision();
   observe(2.0, 2.0, 0.0, 0.0, false);
   const auto selected = decide();
   EXPECT_DOUBLE_EQ(selected.twist.linear.x, 0.4);
   EXPECT_DOUBLE_EQ(selected.twist.angular.z, 0.0);
-  expectDiagnostic("\"geometry_rejected\":0");
-  expectDiagnostic("\"evidence_state\":\"partial\"");
   expectDiagnostic("\"mode\":\"navigate\"");
 }
 
@@ -682,7 +528,7 @@ TEST_F(ControllerDynamicTest, DetailedDiagnosticsDoNotChangeSelection)
   expectDiagnostic("Control timing:");
 }
 
-TEST_F(ControllerDynamicTest, StaleAndFutureScansRejectNormalCandidatesAndMarkZeroEmergency)
+TEST_F(ControllerDynamicTest, StaleAndFutureScansDoNotFilterCostmapCandidates)
 {
   configureDecision();
   observe(0.66, 0.4, 0.0, -0.4);
@@ -690,47 +536,26 @@ TEST_F(ControllerDynamicTest, StaleAndFutureScansRejectNormalCandidatesAndMarkZe
   for (int64_t time : {stamp + 350000001LL, stamp - 1LL}) {
     setTime(time);
     const auto selected = decide();
-    EXPECT_DOUBLE_EQ(selected.twist.linear.x, 0.0);
+    EXPECT_DOUBLE_EQ(selected.twist.linear.x, 0.4);
     EXPECT_DOUBLE_EQ(selected.twist.angular.z, 0.0);
-    expectDiagnostic("\"mode\":\"emergency\"");
-    expectDiagnostic("\"accepted\":0");
-    expectDiagnostic(time > stamp ? "expired scan" : "future scan stamp");
-    expectDiagnostic("\"known_input_available\":false");
+    expectDiagnostic("\"mode\":\"navigate\"");
+    expectDiagnostic("\"accepted\":9");
   }
 }
 
-TEST_F(ControllerDynamicTest, CostmapHardCollisionCannotBeOverriddenByDynamicFilter)
+TEST_F(ControllerDynamicTest, CostmapHardCollisionStillRejectsCandidates)
 {
   configureDecision();
   observe(0.66, 0.4, 0.0, -0.4);
   setWall(nav2_costmap_2d::LETHAL_OBSTACLE);
   const auto selected = decide();
-  const auto trajectory = TrajectoryPredictor(1.0, 0.5).predict(
-    Pose2D{}, {selected.twist.linear.x, selected.twist.angular.z});
-  EXPECT_TRUE(evaluateTrajectory(trajectory, *costmap->getCostmap()).collision_free);
-  EXPECT_LE(selected.twist.linear.x, 0.2);
-}
-
-TEST_F(ControllerDynamicTest, TerminalConflictBrakesInsteadOfRotatingThroughRisk)
-{
-  configureDecision();
-  observe(0.18, 0.18);
-  for (double yaw : {-1.0, 1.0}) {
-    nav_msgs::msg::Path path;
-    path.header.frame_id = "perception_world";
-    geometry_msgs::msg::PoseStamped pose;
-    pose.pose.orientation.w = 1.0;
-    path.poses.push_back(pose);
-    pose.pose.position.x = 0.1;
-    pose.pose.orientation.z = std::sin(yaw / 2.0);
-    pose.pose.orientation.w = std::cos(yaw / 2.0);
-    path.poses.push_back(pose);
-    controller.setPlan(path);
-    const auto selected = decide();
-    EXPECT_DOUBLE_EQ(selected.twist.linear.x, 0.0);
-    EXPECT_DOUBLE_EQ(selected.twist.angular.z, 0.0);
-    expectDiagnostic("\"mode\":\"emergency\"");
-  }
+  const MotionPredictor model({1.0, 2.0, 0.0, 1.0, 0.5});
+  const Velocity2D candidate{selected.twist.linear.x, selected.twist.angular.z};
+  const auto nominal = model.predict(Pose2D{}, {}, candidate, 1.0);
+  const auto backup = model.predict(Pose2D{}, {}, candidate, 0.5);
+  EXPECT_TRUE(evaluateTrajectory(nominal.trajectory, *costmap->getCostmap()).collision_free);
+  EXPECT_TRUE(evaluateTrajectory(backup.trajectory, *costmap->getCostmap()).collision_free);
+  EXPECT_LE(backup.stop_time, 1.0);
 }
 
 TEST_F(ControllerDynamicTest, TerminalSlowingKeepsOriginalReachableSpeedPriority)
@@ -801,16 +626,6 @@ TEST_F(ControllerDynamicTest, ReusesActualNonDefaultPredictorTimeGrid)
   expectDiagnostic("\"mode\":\"navigate\"");
 }
 
-TEST_F(ControllerDynamicTest, UsesCostmapRobotRadiusInsteadOfAnotherHardcodedRadius)
-{
-  costmap->setCircularRadius(0.1);
-  configureDecision();
-  observe(0.66, 0.4, 0.0, -0.4);
-  const auto selected = decide();
-  expectFilteredWinner(selected);
-  expectDiagnostic("\"known_input_available\":true");
-}
-
 TEST_F(ControllerDynamicTest, StoppingAdmissibilityReplacesFixedSpeedStaticHorizon)
 {
   configureDecision(false);
@@ -857,7 +672,6 @@ TEST_F(ControllerDynamicTest, EmptyVelocityWindowUsesExplicitBrakingBranch)
   EXPECT_DOUBLE_EQ(selected.twist.linear.x, 0.0);
 }
 
-
 TEST_F(ControllerDynamicTest, CrossingHoldKeepsCurrentCandidateSeparateFromOutput)
 {
   node->declare_parameter("FollowPath.crossing_yield.enabled", true);
@@ -886,7 +700,6 @@ TEST_F(ControllerDynamicTest, DisabledCrossingYieldPreservesCommandWithClosingEv
   EXPECT_GT(selected.twist.linear.x, 0.0);
   EXPECT_EQ(diagnostics.find("Crossing yield:"), std::string::npos);
 }
-
 
 TEST_F(ControllerDynamicTest, CrossingReleaseUsesNewSpeedLimitedCandidateFromSameCycle)
 {
@@ -945,7 +758,6 @@ TEST_F(ControllerDynamicTest, CrossingEnabledWithoutIntentRetainsTerminalSlowing
   EXPECT_NEAR(selected.twist.angular.z, .1, 1e-12);
   expectDiagnostic("\"hold\":false");
 }
-
 
 TEST_F(ControllerDynamicTest, ReplanDetourAndReentryBothKeepWaiting)
 {
@@ -1006,7 +818,6 @@ TEST_F(ControllerDynamicTest, PendingRiskKeepsTerminalCommandsStopped)
   expectDiagnostic("\"hold\":true");
   expectDiagnostic("\"released\":false");
 }
-
 
 TEST_F(ControllerDynamicTest, MissingExactScanTfPausesFallbackUntilCoveredObservationsResume)
 {
@@ -1151,17 +962,16 @@ TEST_F(ControllerMedianTest, ZeroPlanningVelocityWithoutRawOdomCannotPermitM)
   expectDiagnostic("\"global_dynamic_active\":true");
 }
 
-TEST_F(ControllerMedianTest, MedianHandoffClearsYieldAndBypassesAllDynamicConsumers)
+TEST_F(ControllerMedianTest, MedianHandoffClearsYieldAndKeepsCostmapChecks)
 {
   configureMedian();
   settleAndHandoff();
   EXPECT_GT(decide().twist.linear.x, 0);
   EXPECT_EQ(diagnostics.find("Crossing yield:"), std::string::npos);
-  // A fresh unknown cluster would block the original dynamic geometry filter.
+  // A fresh unknown cluster must not restore the consumed crossing event.
   setTime(node->now().nanoseconds() + 200000000LL);
   publishGeometry(node->now().nanoseconds(), .18, .18);
   EXPECT_GT(decide().twist.linear.x, 0);
-  expectDiagnostic("\"geometry_rejected\":0");
   expectDiagnostic("\"global_dynamic_active\":false");
   setPlan();  // A same-task replan must not restore the consumed old event.
   EXPECT_GT(decide().twist.linear.x, 0);

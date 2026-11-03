@@ -2,7 +2,6 @@
 #include <limits>
 #include <gtest/gtest.h>
 
-#include "my_dwa_controller/dynamic_filter.hpp"
 #include "my_dwa_controller/motion_predictor.hpp"
 #include "my_dwa_controller/obstacle_evaluator.hpp"
 #include "nav2_costmap_2d/cost_values.hpp"
@@ -19,7 +18,6 @@ TEST(Motion, NominalMotionStartsFromMeasuredVelocity)
   EXPECT_NEAR(r.trajectory.poses[3].x, 0.01625, 1e-12);
   EXPECT_NEAR(r.trajectory.poses.back().x, 0.47, 1e-10);
 }
-
 TEST(Motion, CandidateBackupIncludesExecutionAndStoppedOccupancy)
 {
   const auto r = MotionPredictor({}).predict(Pose2D{}, {0.26, 0}, {0.26, 0}, 0.05);
@@ -122,146 +120,4 @@ TEST(StaticScoring, EmptyTrajectoryIsNotAnObstacleFreeMeasurement)
 {
   nav2_costmap_2d::Costmap2D map(20, 20, 0.05, -0.5, -0.5, 0);
   EXPECT_THROW(trajectoryObstacleCost({}, map), std::invalid_argument);
-}
-
-ScanSnapshot pointScan(double x, double y, double vx, double vy)
-{
-  ScanSnapshot scan;
-  scan.stamp = rclcpp::Time(2000000000LL, RCL_ROS_TIME);
-  scan.frame_id = "odom";
-  ObstacleObservation o;
-  o.points = {{x, y}};
-  o.aabb.min_x = o.aabb.max_x = x;
-  o.aabb.min_y = o.aabb.max_y = y;
-  o.vx = vx; o.vy = vy; o.velocity_valid = true;
-  scan.obstacles.push_back(o);
-  return scan;
-}
-
-TEST(DynamicAdmissibility, ForwardMotionCanPassWhileItsBackupIsHitAfterStopping)
-{
-  const MotionPredictor model({});
-  const auto normal = model.predict(Pose2D{}, {0.26, 0}, {0.26, 0}, 1.7);
-  const auto backup = model.predict(Pose2D{}, {0.26, 0}, {0.26, 0}, 0.05);
-  const DynamicFilter filter(0.22, 1.7, 0.05);
-  auto scan = pointScan(0, 0.65, 0, -0.4);
-  const auto prepared = filter.prepare(
-    {&normal.trajectory, &backup.trajectory}, &scan,
-    "odom", rclcpp::Time(2000000000LL, RCL_ROS_TIME));
-  const auto n = filter.evaluate(normal.trajectory, prepared);
-  const auto b = filter.evaluate(backup.trajectory, prepared);
-  ASSERT_TRUE(n.available);
-  ASSERT_TRUE(b.available);
-  EXPECT_TRUE(n.conflicts.empty());
-  EXPECT_FALSE(b.conflicts.empty());
-}
-
-TEST(DynamicAdmissibility, ContinuousInteriorEncounterSurvivesBroadphase)
-{
-  MotionConfig config;
-  config.horizon = 0.2; config.step = 0.1;
-  const auto r = MotionPredictor(config).predict(Pose2D{}, {}, {}, 0);
-  auto scan = pointScan(0, 0.5, 0, -10);
-  const DynamicFilter filter(0.22, 0.2, 0.1);
-  const auto prepared = filter.prepare(
-    {&r.trajectory}, &scan, "odom",
-    rclcpp::Time(2000000000LL, RCL_ROS_TIME));
-  const auto result = filter.evaluate(r.trajectory, prepared);
-  ASSERT_TRUE(result.available);
-  EXPECT_FALSE(result.conflicts.empty());
-}
-
-TEST(ObservedGeometry, UnknownNominalCrossingRemainsConstrainedBeyondClearBackup)
-{
-  const MotionPredictor model({});
-  const auto nominal = model.predict(Pose2D{}, {0.26, 0}, {0.26, 0}, 1.7);
-  const auto backup = model.predict(Pose2D{}, {0.26, 0}, {0.26, 0}, 0.05);
-  auto scan = pointScan(0.5, 0, 99, -99);
-  scan.obstacles[0].velocity_valid = false;
-  const DynamicFilter filter(0.22, 1.7, 0.05);
-  const auto prepared = filter.prepare(
-    {&nominal.trajectory, &backup.trajectory}, &scan, "odom",
-    rclcpp::Time(2000000000LL, RCL_ROS_TIME));
-  ASSERT_TRUE(prepared.input.input_available);
-  EXPECT_TRUE(filter.observedGeometryCollision(nominal.trajectory, prepared));
-  EXPECT_FALSE(filter.observedGeometryCollision(backup.trajectory, prepared));
-  EXPECT_TRUE(filter.evaluate(nominal.trajectory, prepared).conflicts.empty());
-  EXPECT_EQ(prepared.input.unknown_clusters, 1u);
-}
-
-TEST(ObservedGeometry, ChecksWholeSegmentsAndEachTrajectoryIndependently)
-{
-  Trajectory crossing{{0, 0}, std::vector<Pose2D>(3)};
-  for (std::size_t i = 0; i < 3; ++i) {
-    crossing.poses[i].x = i;
-  }
-  auto clear = crossing;
-  for (auto & pose : clear.poses) {
-    pose.y = 1;
-  }
-
-  auto scan = pointScan(0.5, 0, 0, 0);
-  scan.obstacles[0].velocity_valid = false;
-  const DynamicFilter filter(0.1, 0.2, 0.1);
-  const auto prepared = filter.prepare(
-    {&clear, &crossing}, &scan, "odom", rclcpp::Time(2000000000LL, RCL_ROS_TIME));
-  ASSERT_TRUE(prepared.input.input_available);
-  // Every sampled pose is outside radius+margin. The segment interior crosses.
-  EXPECT_TRUE(filter.observedGeometryCollision(crossing, prepared));
-  EXPECT_FALSE(filter.observedGeometryCollision(clear, prepared));
-}
-
-TEST(ObservedGeometry, FarUnknownPointsDoNotRejectAndDoNotUseVelocityFields)
-{
-  const auto stopped = MotionPredictor({}).predict(Pose2D{}, {}, {}, 0);
-  auto scan = pointScan(3, 3, std::numeric_limits<double>::quiet_NaN(), 99);
-  scan.obstacles[0].velocity_valid = false;
-  const DynamicFilter filter(0.22, 1.7, 0.05);
-  const auto prepared = filter.prepare(
-    {&stopped.trajectory}, &scan, "odom", rclcpp::Time(2000000000LL, RCL_ROS_TIME));
-  ASSERT_TRUE(prepared.input.input_available);
-  EXPECT_FALSE(filter.observedGeometryCollision(stopped.trajectory, prepared));
-  EXPECT_EQ(prepared.unknown_points.size(), 1u);
-  EXPECT_TRUE(filter.evaluate(stopped.trajectory, prepared).conflicts.empty());
-}
-
-TEST(ObservedGeometry, MixedKnownPredictionAndUnknownSnapshotRemainIndependent)
-{
-  MotionConfig config;
-  config.horizon = 0.2; config.step = 0.1;
-  const auto stopped = MotionPredictor(config).predict(Pose2D{}, {}, {}, 0);
-  auto scan = pointScan(0, 0.5, 0, -10);
-  auto unknown = pointScan(0.1, 0, 123, 456).obstacles.front();
-  unknown.velocity_valid = false;
-  scan.obstacles.push_back(unknown);
-  const DynamicFilter filter(0.1, 0.2, 0.1);
-  const auto prepared = filter.prepare(
-    {&stopped.trajectory}, &scan, "odom", rclcpp::Time(2000000000LL, RCL_ROS_TIME));
-  ASSERT_TRUE(prepared.input.input_available);
-  const auto known = filter.evaluate(stopped.trajectory, prepared);
-  ASSERT_TRUE(known.available);
-  ASSERT_EQ(known.conflicts.size(), 1u);
-  EXPECT_EQ(known.conflicts[0].index, 0u);
-  EXPECT_TRUE(filter.observedGeometryCollision(stopped.trajectory, prepared));
-  EXPECT_EQ(prepared.input.predicted_clusters, 1u);
-  EXPECT_EQ(prepared.input.unknown_clusters, 1u);
-}
-
-TEST(ObservedGeometry, BrakingSweepAndStoppedOccupancyRemainConstrained)
-{
-  const MotionPredictor model({});
-  const auto braking = model.predict(Pose2D{}, {0.26, 0}, {}, 0);
-  const auto stopped = model.predict(Pose2D{}, {}, {}, 0);
-  auto scan = pointScan(0.32, 0, 0, 0);
-  scan.obstacles[0].velocity_valid = false;
-  const DynamicFilter filter(0.22, 1.7, 0.05);
-  auto prepared = filter.prepare(
-    {&braking.trajectory, &stopped.trajectory}, &scan, "odom",
-    rclcpp::Time(2000000000LL, RCL_ROS_TIME));
-  EXPECT_TRUE(filter.observedGeometryCollision(braking.trajectory, prepared));
-  EXPECT_FALSE(filter.observedGeometryCollision(stopped.trajectory, prepared));
-  scan.obstacles[0].points = {{0.26, 0}};
-  prepared = filter.prepare(
-    {&stopped.trajectory}, &scan, "odom", rclcpp::Time(2000000000LL, RCL_ROS_TIME));
-  EXPECT_TRUE(filter.observedGeometryCollision(stopped.trajectory, prepared));
 }

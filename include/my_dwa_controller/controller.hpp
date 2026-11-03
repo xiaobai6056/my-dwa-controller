@@ -13,7 +13,6 @@
 #include "nav_msgs/msg/path.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "my_dwa_controller/quasi_static_observer.hpp"
-#include "my_dwa_controller/dynamic_filter.hpp"
 #include "my_dwa_controller/motion_predictor.hpp"
 #include "my_dwa_controller/path_handler.hpp"
 #include "my_dwa_controller/scan_obstacle_tracker.hpp"
@@ -118,12 +117,12 @@ private:
   std::uint64_t diagnostic_cycle_ = 0;
   std::unique_ptr<PathHandler> path_handler_;
   std::unique_ptr<MotionPredictor> predictor_;
-  std::unique_ptr<DynamicFilter> dynamic_filter_;
   std::unique_ptr<CrossingYield> crossing_yield_;
   QuasiStaticObserver quasi_static_;
   std::shared_ptr<RobotStopObserver> robot_stop_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscription_;
   std::string odom_topic_;
+  // Governs CrossingYield and quasi-static handoff/re-entry, independently of DWA scoring.
   bool dynamic_active_ = true;
   int64_t handoff_stamp_ = 0, last_control_time_ = 0;
   std::unique_ptr<TrajectoryScorer> scorer_;

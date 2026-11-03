@@ -3,8 +3,8 @@
 ## Default configuration
 
 The shipped `config/nav2_params.yaml` enables Scan Tracker and Crossing Yield
-under `/controller_server`'s `FollowPath` plugin. DynamicFilter is constructed
-with Scan Tracker and has no separate enable parameter:
+under `/controller_server`'s `FollowPath` plugin. Version 1.3 removes the
+dynamic candidate filter; these switches still control perception and Yield:
 
 ```yaml
 controller_server:
@@ -17,8 +17,9 @@ controller_server:
 ```
 
 Use the complete Nav2 parameter file, the configured `/scan` topic, simulation
-time when applicable, and scan-time TF to the local costmap frame. Without usable
-Scan evidence the enabled filter returns a zero target. Rebuild and source an
+time when applicable, and scan-time TF to the local costmap frame. Scan availability
+does not independently reject DWA candidates. Pending Yield risk still holds its
+stop without usable new evidence. Rebuild and source an
 installation matching the source before running; changing source configuration
 does not refresh an existing plugin binary. Callers that omit the YAML switches
 retain the Controller's existing false parameter fallbacks.
@@ -66,10 +67,9 @@ The bounded one-second/256-record stop-state buffer refuses a query if its
 causal sample was evicted; a later usable Scan can resume observation.
 Planning velocity and zero commands are not used as stop evidence.
 
-Permission clears CrossingYield and bypasses DynamicFilter for all candidate,
-observed-geometry and braking-fallback checks in the same control cycle.
-Ordinary Costmap collision checks, prediction, braking limits and scoring remain
-active. Tracker continues to observe. A newer, associated full velocity of at
+Permission clears CrossingYield and suspends its handling in the same control
+cycle. Ordinary Costmap collision checks, prediction, braking limits and scoring
+remain active. The mode no longer controls a dynamic candidate filter. Tracker continues to observe. A newer, associated full velocity of at
 least 0.05 m/s with a current forward-path conflict restores dynamic handling;
 the existing stateless path-conflict query supplies this positive risk test.
 Other detected full-motion or existing partial-crossing risks veto handover.
