@@ -21,7 +21,6 @@ find_package(sensor_msgs REQUIRED)
 find_package(Eigen3 REQUIRED)
 ament_export_dependencies(Eigen3)
 
-
 # 轨迹预测独立库；启用 PIC，便于后续链接到 Controller 共享插件。
 add_library(trajectory_predictor STATIC src/trajectory_predictor.cpp)
 set_target_properties(trajectory_predictor PROPERTIES POSITION_INDEPENDENT_CODE ON)
@@ -180,20 +179,6 @@ install(TARGETS path_conflict_evaluator
   EXPORT export_path_conflict_evaluator ARCHIVE DESTINATION lib)
 ament_export_targets(export_path_conflict_evaluator HAS_LIBRARY_TARGET)
 
-# Continuous candidate geometry, used by Controller only when Scan tracking is enabled.
-add_library(dynamic_trajectory_evaluator STATIC src/dynamic_trajectory_evaluator.cpp src/dynamic_risk_evaluator.cpp src/dynamic_filter.cpp)
-set_target_properties(dynamic_trajectory_evaluator PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_compile_features(dynamic_trajectory_evaluator PUBLIC cxx_std_17)
-target_include_directories(dynamic_trajectory_evaluator PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>
-)
-target_link_libraries(dynamic_trajectory_evaluator PUBLIC
-  scan_obstacle_tracker geometry_msgs::geometry_msgs__rosidl_generator_cpp)
-install(TARGETS dynamic_trajectory_evaluator
-  EXPORT export_dynamic_trajectory_evaluator ARCHIVE DESTINATION lib)
-ament_export_targets(export_dynamic_trajectory_evaluator HAS_LIBRARY_TARGET)
-
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
@@ -232,9 +217,6 @@ if(BUILD_TESTING)
 
   ament_add_gtest(test_path_conflict_evaluator test/test_path_conflict_evaluator.cpp)
   target_link_libraries(test_path_conflict_evaluator path_conflict_evaluator)
-
-  ament_add_gtest(test_dynamic_trajectory_evaluator test/test_dynamic_trajectory_evaluator.cpp)
-  target_link_libraries(test_dynamic_trajectory_evaluator dynamic_trajectory_evaluator trajectory_predictor)
 
   # 使用 cppcheck 的 GTest 宏模型注册全包静态检查。
   # 仅替换自动注册，检查文件范围不变，避免重复执行同一项检查。
@@ -283,7 +265,7 @@ ament_target_dependencies(${PROJECT_NAME}
 )
 target_link_libraries(${PROJECT_NAME}
   velocity_sampler trajectory_predictor motion_predictor obstacle_evaluator trajectory_scorer path_handler
-  scan_obstacle_tracker dynamic_trajectory_evaluator
+  scan_obstacle_tracker
   quasi_static_observer path_conflict_evaluator
 )
 
@@ -313,16 +295,13 @@ if(BUILD_TESTING)
     SURFACE_MOTION_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test/fixtures/surface_motion")
 
   ament_add_gtest(test_stoppable test/test_stoppable.cpp)
-  target_link_libraries(test_stoppable motion_predictor obstacle_evaluator dynamic_trajectory_evaluator)
-
-  ament_add_gtest(test_dynamic_risk test/test_dynamic_risk.cpp)
-  target_link_libraries(test_dynamic_risk dynamic_trajectory_evaluator trajectory_predictor)
+  target_link_libraries(test_stoppable motion_predictor obstacle_evaluator)
 
   ament_add_gtest(test_crossing_yield test/test_crossing_yield.cpp src/crossing_yield.cpp)
   target_link_libraries(test_crossing_yield scan_obstacle_tracker motion_predictor)
 
   ament_add_gtest(test_controller_scan test/test_controller_scan.cpp)
-  target_link_libraries(test_controller_scan ${PROJECT_NAME} dynamic_trajectory_evaluator)
+  target_link_libraries(test_controller_scan ${PROJECT_NAME})
   ament_target_dependencies(test_controller_scan rclcpp rclcpp_lifecycle nav2_costmap_2d sensor_msgs)
 
 endif()

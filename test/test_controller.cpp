@@ -311,7 +311,7 @@ TEST_F(ControllerTest, UsesControllerFrequencyAndBothCurrentVelocityComponents)
   EXPECT_LE(command.twist.angular.z, 0.6 + kTolerance);
 }
 
-TEST_F(ControllerTest, ActualNav2YamlEnablesDynamicControlAndStopsWithoutScan)
+TEST_F(ControllerTest, ActualNav2YamlKeepsScanAndYieldWithoutFilteringCandidates)
 {
   rclcpp::NodeOptions options;
   options.arguments({"--ros-args", "--params-file", MY_DWA_TEST_PARAMS_FILE});
@@ -323,9 +323,9 @@ TEST_F(ControllerTest, ActualNav2YamlEnablesDynamicControlAndStopsWithoutScan)
   controller_->configure(node, "FollowPath", tf_, costmap_);
   controller_->setPlan(straightPath());
   controller_->activate();
-  // Enabled DynamicFilter must reject commands without a usable Scan snapshot.
+  // Scan availability does not independently gate Costmap-feasible DWA candidates.
   const auto command = compute();
-  EXPECT_DOUBLE_EQ(command.twist.linear.x, 0.0);
+  EXPECT_NEAR(command.twist.linear.x, 0.125, kTolerance);
   EXPECT_DOUBLE_EQ(command.twist.angular.z, 0.0);
 }
 
@@ -510,7 +510,6 @@ TEST_F(ControllerTest, PluginExportStillLoadsNav2Controller)
   EXPECT_NE(controller_, nullptr);
 }
 
-
 TEST_F(ControllerTest, UsesConfiguredFollowLookahead)
 {
   ASSERT_TRUE(node_->set_parameter({"FollowPath.obstacle_weight", 0.0}).successful);
@@ -572,7 +571,6 @@ TEST_F(ControllerTest, UsesActiveGoalCheckerToleranceForTerminalHeadingRegion)
   EXPECT_LT(outside_fallback.twist.angular.z, 0.0);
 }
 
-
 TEST_F(ControllerTest, SpeedLimitReconstructionPreservesFollowLookahead)
 {
   for (const char * key : {"obstacle_weight", "speed_weight", "path_weight"}) {
@@ -584,7 +582,6 @@ TEST_F(ControllerTest, SpeedLimitReconstructionPreservesFollowLookahead)
   controller_->setSpeedLimit(50.0, true);
   EXPECT_NEAR(compute().twist.linear.x, 0.1, kTolerance);
 }
-
 
 TEST_F(ControllerTest, TerminalSlowsWithinReachableWindowInsteadOfForcingZero)
 {
@@ -930,7 +927,6 @@ TEST_F(ControllerTest, TerminalCoarseAngularGridStillAllowsSmallUsefulRotation)
   EXPECT_LT(command.twist.angular.z, 0.1);
 }
 
-
 TEST_F(ControllerTest, TerminalUsesGoalCheckerYawToleranceWithoutCallingSuccessCheck)
 {
   terminalConfigure();
@@ -1132,22 +1128,6 @@ TEST_F(ControllerTest, StoppingCharacterizationCommandAndFallbackSweep)
   }
   EXPECT_EQ(index, 225u);
   EXPECT_EQ(signature, 0x35339bb92135f25dULL);
-}
-
-TEST_F(ControllerTest, EnabledTrackerWithoutSnapshotAlwaysReturnsZeroEmergencyTarget)
-{
-  node_->declare_parameter("FollowPath.scan_tracker.enabled", true);
-  terminalConfigure();
-  setGoal(2.0, 0.0, 0.0);
-  // Zero is an emergency target, including when measured motion needs braking;
-  // it is not a certificate that the braking sweep is collision-free.
-  for (double v : {0.0, 0.2, 0.4}) {
-    geometry_msgs::msg::Twist current;
-    current.linear.x = v;
-    const auto result = controller_->computeVelocityCommands(makePose(0.0, 0.0), current, nullptr);
-    EXPECT_DOUBLE_EQ(result.twist.linear.x, 0.0);
-    EXPECT_DOUBLE_EQ(result.twist.angular.z, 0.0);
-  }
 }
 
 TEST_F(ControllerTest, RefactorRethrowsNonStandardGoalCheckerException)

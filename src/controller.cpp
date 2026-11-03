@@ -136,7 +136,6 @@ void MyDWAController::configure(
             "terminal control requires positive acceleration/angular limits and yaw tolerance <= pi");
   }
   std::shared_ptr<ScanObstacleTracker> scan_tracker;
-  std::unique_ptr<DynamicFilter> dynamic_evaluator;
   std::string scan_topic;
   if (readParameter(*node, name + ".scan_tracker.enabled", false)) {
     scan_topic = readParameter(*node, name + ".scan_tracker.topic", std::string("/scan"));
@@ -148,11 +147,6 @@ void MyDWAController::configure(
     scan_tracker = std::make_shared<ScanObstacleTracker>(
       tf, parameter("scan_tracker.cluster_distance", 0.12),
       static_cast<std::size_t>(min_points), parameter("scan_tracker.association_distance", 0.35));
-    const double robot_radius = costmap_ros->getUseRadius() ? costmap_ros->getRobotRadius() :
-      costmap_ros->getLayeredCostmap()->getCircumscribedRadius();
-    // Reuse the configured predictor mesh and V3's initial geometry/freshness
-    // conventions. These are not measured safety thresholds or braking inputs.
-    dynamic_evaluator = std::make_unique<DynamicFilter>(robot_radius, sim_time, simulation_dt);
   }
   auto path_handler = std::make_unique<PathHandler>(tf);
 
@@ -170,7 +164,6 @@ void MyDWAController::configure(
   follow_lookahead_ = follow_lookahead;
   heading_lookahead_ = heading_lookahead;
   scan_tracker_ = std::move(scan_tracker);
-  dynamic_filter_ = std::move(dynamic_evaluator);
   crossing_yield_ = readParameter(
     *node, plugin_name_ + ".crossing_yield.enabled",
     false) ? std::make_unique<CrossingYield>() : nullptr;
@@ -306,7 +299,6 @@ void MyDWAController::cleanup()
   scan_subscription_.reset();
   scan_tf_timer_.reset();
   scan_tracker_.reset();
-  dynamic_filter_.reset();
   crossing_yield_.reset();
   scan_topic_.clear();
   path_handler_.reset();
@@ -615,41 +607,12 @@ Velocity2D MyDWAController::selectBestCandidate(
 
   const auto now = node->now();
   const auto scan = scan_tracker_ ? scan_tracker_->snapshot() : nullptr;
-  std::vector<const Trajectory *> queries{&fallback.trajectory};
-  for (const auto & c : feasible) {
-    queries.push_back(&c.backup);
-  }
   updateDynamicMode(scan.get(), inputs, now);
-  auto * active_filter = dynamic_active_ ? dynamic_filter_.get() : nullptr;
-  PreparedFilter prepared;
-  if (active_filter) {
-    prepared = active_filter->prepare(queries, scan.get(), costmap_ros_->getGlobalFrameID(), now);
-  }
   std::optional<std::size_t> best;
   double best_score = std::numeric_limits<double>::infinity();
-  std::size_t accepted = 0, dynamic_rejected = 0;
-  std::size_t geometry_rejected = 0, unavailable_rejected = 0;
-  std::vector<std::size_t> rejected(scan ? scan->obstacles.size() : 0, 0);
-  std::optional<double> selected_clearance;
+  std::size_t accepted = 0;
   for (std::size_t i = 0; i < feasible.size(); ++i) {
     const auto & c = feasible[i];
-    const auto risk =
-      active_filter ? active_filter->evaluate(c.backup, prepared) : FilterResult{};
-    if (active_filter && !risk.available) {++unavailable_rejected; continue;}
-    if (active_filter &&
-      (active_filter->observedGeometryCollision(c.nominal, prepared) ||
-      active_filter->observedGeometryCollision(c.backup, prepared)))
-    {
-      ++geometry_rejected;
-      continue;
-    }
-    if (!risk.conflicts.empty()) {
-      ++dynamic_rejected;
-      for (const auto & conflict : risk.conflicts) {
-        ++rejected[conflict.index];
-      }
-      continue;
-    }
     ++accepted;
     const double score = scoreCandidate(c.nominal, c.obstacle_cost, inputs, goal).total_cost;
     const auto & cmd = c.nominal.command;
@@ -659,16 +622,10 @@ Velocity2D MyDWAController::selectBestCandidate(
       prefer = goal.phase == GoalPhase::Slowing && cmd.v != old.v ? cmd.v < old.v :
         score < best_score || (score == best_score && std::abs(cmd.omega) < std::abs(old.omega));
     }
-    if (prefer) {best = i; best_score = score; selected_clearance = risk.min_clearance;}
+    if (prefer) {best = i; best_score = score;}
   }
-  const auto fallback_risk = active_filter ?
-    active_filter->evaluate(fallback.trajectory, prepared) : FilterResult{};
-  const bool fallback_geometry_collision = active_filter &&
-    active_filter->observedGeometryCollision(fallback.trajectory, prepared);
   const bool fallback_complete = fallback.stop_time <= sim_time_;
-  const bool emergency = !best && (!fallback_static_clear || !fallback_complete ||
-    (active_filter && (!fallback_risk.available ||
-    !fallback_risk.conflicts.empty() || fallback_geometry_collision)));
+  const bool emergency = !best && (!fallback_static_clear || !fallback_complete);
   const auto dwa_candidate = best ? feasible[*best].nominal.command : Velocity2D{0, 0};
   auto output_command = dwa_candidate;
   if (crossing_yield_ && dynamic_active_) {
@@ -676,10 +633,7 @@ Velocity2D MyDWAController::selectBestCandidate(
       scan.get(), inputs.local_path, inputs.initial, inputs.current, fallback.trajectory,
       now.nanoseconds(), best.has_value());
     if (y.triggered || y.released) {quasi_static_.reset();}
-    if (y.hold && best && fallback_complete && fallback_static_clear &&
-      (!active_filter || (fallback_risk.available && fallback_risk.conflicts.empty() &&
-      !fallback_geometry_collision)))
-    {
+    if (y.hold && best && fallback_complete && fallback_static_clear) {
       const auto & selected = feasible[*best];
       const MotionRollout backup{selected.backup, selected.stop_time};
       y.hold = !crossing_yield_->canApproach(
@@ -696,27 +650,16 @@ Velocity2D MyDWAController::selectBestCandidate(
         scan->stamp).nanoseconds() : int64_t{0}, y.hold ? "true" : "false", y.triggered ? "true" : "false", y.released ? "true" : "false", y.occupied ? "true" : "false", y.clear ? "true" : "false", y.safe_stop ? "true" : "false", y.margin, y.entry, y.exit, y.evidence_rank,
       y.clear_scans);
   }
-  const char * state = !prepared.input.input_available ? "unavailable" :
-    prepared.input.unknown_clusters ? "partial" : "complete";
   std::ostringstream out;
   out << std::setprecision(17) << std::boolalpha
-      << "{\"cycle\":" << diagnostic_cycle_ << ",\"now_ns\":" << now.nanoseconds()
+      << "{\"schema_version\":2,\"cycle\":" << diagnostic_cycle_
+      << ",\"now_ns\":" << now.nanoseconds()
       << ",\"scan_ns\":" << (scan ? rclcpp::Time(scan->stamp).nanoseconds() : 0)
       << ",\"global_dynamic_active\":" << dynamic_active_
-      << ",\"known_input_available\":" << prepared.input.input_available
-      << ",\"evidence_state\":" << std::quoted(state)
-      << ",\"input_reason\":" << std::quoted(prepared.input.reason)
-      << ",\"known\":" << prepared.input.predicted_clusters
-      << ",\"unknown\":" << prepared.input.unknown_clusters
-      << ",\"input_points\":" << prepared.input.input_points
-      << ",\"retained_points\":" << prepared.input.retained_points
-      << ",\"observed_points\":" << prepared.unknown_points.size()
       << ",\"sampled\":" << commands.size() << ",\"horizon_rejected\":" << horizon_rejected
       << ",\"nominal_rejected\":" << nominal_rejected
       << ",\"static_rejected\":" << static_rejected << ",\"static_feasible\":" << feasible.size()
-      << ",\"geometry_rejected\":" << geometry_rejected
-      << ",\"unavailable_rejected\":" << unavailable_rejected
-      << ",\"dynamic_rejected\":" << dynamic_rejected << ",\"accepted\":" << accepted
+      << ",\"accepted\":" << accepted
       << ",\"mode\":" << std::quoted(best ? "navigate" : emergency ? "emergency" : "brake")
       << ",\"candidate\":[" << dwa_candidate.v << ',' << dwa_candidate.omega << ']'
       << ",\"output\":[" << output_command.v << ',' << output_command.omega << ']'
@@ -726,20 +669,15 @@ Velocity2D MyDWAController::selectBestCandidate(
       << ",\"initial\":[" << inputs.initial.x << ',' << inputs.initial.y << ',' <<
     inputs.initial.theta << ']'
       << ",\"selected_stop_time\":" << (best ? feasible[*best].stop_time : fallback.stop_time)
-      << ",\"selected_clearance\":";
-  if (selected_clearance) {out << *selected_clearance;} else {out << "null";}
-  out << ",\"fallback_static_clear\":" << fallback_static_clear
+      << ",\"fallback_static_clear\":" << fallback_static_clear
       << ",\"fallback_complete\":" << fallback_complete
-      << ",\"fallback_dynamic_available\":" << fallback_risk.available
-      << ",\"fallback_known_collision\":" << !fallback_risk.conflicts.empty()
-      << ",\"fallback_geometry_collision\":" << fallback_geometry_collision
       << ",\"clusters\":[";
   if (scan) {
     for (std::size_t i = 0; i < scan->obstacles.size(); ++i) {
       const auto & o = scan->obstacles[i];
       if (i) {out << ',';}
       out << '[' << o.velocity_valid << ',' << o.vx << ',' << o.vy << ','
-          << o.points.size() << ',' << rejected[i] << ']';
+          << o.points.size() << ']';
     }
   }
   out << "]}";

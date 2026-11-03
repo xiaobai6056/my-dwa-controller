@@ -17,7 +17,7 @@
 #include <vector>
 #include <nlohmann/json.hpp>
 #include "my_dwa_controller/trajectory_predictor.hpp"
-#include "my_dwa_controller/dynamic_trajectory_evaluator.hpp"
+#include "my_dwa_controller/scan_obstacle_tracker.hpp"
 #include "rclcpp/serialization.hpp"
 #include "rosbag2_cpp/reader.hpp"
 #include "tf2_msgs/msg/tf_message.hpp"
