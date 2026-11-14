@@ -4,6 +4,7 @@
 from collections import deque
 import json
 from math import isfinite
+import os
 from pathlib import Path
 from threading import Condition, Thread
 from time import monotonic, perf_counter
@@ -25,13 +26,14 @@ except ImportError:
     Detection2DArray = None
 
 ROOT = Path(__file__).resolve().parent
+ASSETS = Path(os.environ.get("MYDWA_VISUAL_ASSETS", ROOT)).expanduser().resolve()
 TOPIC = "/visual_prototype"
 
 
 class PersonDetector(Node):
     def __init__(self):
         super().__init__("person_detector")
-        weights = Path(self.declare_parameter("weights", str(ROOT / "weights/yolov8n.pt")).value)
+        weights = Path(self.declare_parameter("weights", str(ASSETS / "weights/yolov8n.pt")).value)
         self.conf = self.declare_parameter("conf", 0.25).value
         self.imgsz = self.declare_parameter("imgsz", 640).value
         self.device = self.declare_parameter("device", "cuda:0").value

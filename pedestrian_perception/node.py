@@ -20,10 +20,11 @@ from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, qos_profile_sensor_data
 from rclpy.time import Time
 from sensor_msgs.msg import CameraInfo, LaserScan
-from std_msgs.msg import String
+from std_msgs.msg import ColorRGBA, String
 from tf2_msgs.msg import TFMessage
 from tf2_ros import Buffer, TransformException
 from vision_msgs.msg import Detection2DArray
+from visualization_msgs.msg import Marker
 
 from my_dwa_controller.msg import PedestrianState, PedestrianStateArray
 
@@ -158,6 +159,9 @@ class PedestrianNode(Node):
             self.states = KalmanHistory(self.states, config)
         self.transforms = SensorTransforms(self.base, self.duration_parameter('tf_max_gap_s', .07))
         self.publisher = self.create_publisher(PedestrianStateArray, '/my_dwa/pedestrians', 10)
+        self.cluster_pub = None
+        if self.declare_parameter('visualize_clusters', False).value:
+            self.cluster_pub = self.create_publisher(Marker, '/my_dwa/demo/clusters', 1)
         self.create_subscription(LaserScan, '/scan', self.on_scan, qos_profile_sensor_data)
         self.create_subscription(Detection2DArray, '/sort_prototype/tracks', self.on_sort, 50)
         self.create_subscription(CameraInfo, '/visual_prototype/camera/camera_info',
@@ -409,6 +413,8 @@ class PedestrianNode(Node):
                 observation_age=ros_time(age, DurationMsg),
             ))
         self.publisher.publish(message)
+        if self.cluster_pub is not None:
+            self.publish_clusters(message.header, entry, groups)
         if self.log is not None:
             latency = (monotonic_ns() - entry.received) / 1e6 if entry else None
             logged_states = [{**asdict(row), "occupancy_radius_m": CIRCLE_RADIUS_M}
@@ -422,6 +428,26 @@ class PedestrianNode(Node):
                 'callback_to_publish_ms': latency,
             }
             self.log.write(json.dumps(record, allow_nan=False, separators=(',', ':')) + '\n')
+
+    def publish_clusters(self, header, entry, groups):
+        """Color the actual projected points assigned to each SORT track."""
+        marker = Marker(header=header, ns='associated_lidar', id=0, type=Marker.POINTS)
+        marker.pose.orientation.w = 1.
+        marker.scale.x = marker.scale.y = .049
+        marker.lifetime = Duration(seconds=.4).to_msg()
+        palette = ((.18, 1., .68), (.97, .26, .80), (.34, .68, 1.), (.71, .9, .18))
+        points = {beam.index: beam.xy for beam in (entry.projected or [])} if entry else {}
+        for group in groups:
+            if group.track_id is None:
+                continue
+            index = sum(group.track_id.encode()) % len(palette)
+            red, green, blue = palette[index]
+            for beam in group.beams:
+                x, y = points[beam]
+                marker.points.append(Point(x=x, y=y, z=.11))
+                marker.colors.append(ColorRGBA(r=red, g=green, b=blue, a=1.))
+        marker.action = Marker.ADD if marker.points else Marker.DELETE
+        self.cluster_pub.publish(marker)
 
 
 def main():

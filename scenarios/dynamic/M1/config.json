@@ -1,0 +1,62 @@
+{
+  "mode": "A",
+  "source": "visual_prototype/v01_modes.json",
+  "description": "Staggered crossing from opposing sides",
+  "robot": {
+    "x_m": 1.02,
+    "y_m": 0,
+    "yaw_rad": 0,
+    "speed_mps": 0.0,
+    "start_s": 0,
+    "duration_s": 0
+  },
+  "hold_s": 2,
+  "experiment_mode": "M1",
+  "odometry_source": "encoder",
+  "laser_sensor_type": "gpu_ray",
+  "pedestrians": [
+    {
+      "name": "pedestrian_1",
+      "yaw_rad": -1.5707963267948966,
+      "waypoints": [
+        [
+          0,
+          2.069,
+          -0.61
+        ],
+        [
+          2,
+          2.069,
+          -0.61
+        ],
+        [
+          7.0,
+          2.069,
+          0.94
+        ]
+      ]
+    },
+    {
+      "name": "pedestrian_2",
+      "yaw_rad": 1.5707963267948966,
+      "waypoints": [
+        [
+          0,
+          2.68,
+          0.62
+        ],
+        [
+          3.75,
+          2.68,
+          0.62
+        ],
+        [
+          9.0,
+          2.68,
+          -0.96
+        ]
+      ]
+    }
+  ],
+  "end_s": 16.0
+}

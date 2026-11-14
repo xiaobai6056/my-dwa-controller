@@ -19,17 +19,26 @@ from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 ROOT = Path(__file__).resolve().parent
+ASSETS = Path(os.environ.get("MYDWA_VISUAL_ASSETS", ROOT)).expanduser().resolve()
 
 
 def simulation(context):
     model = LaunchConfiguration("model").perform(context)
     v01_run = LaunchConfiguration("v01_run").perform(context)
-    world = Path(v01_run) / "v01.world" if v01_run else ROOT / ".cache" / f"{model}.world"
-    urdf = ROOT / ".cache" / "waffle.urdf"
+    explicit_world = LaunchConfiguration("world").perform(context)
+    if explicit_world and v01_run:
+        raise ValueError("Select world or v01_run")
+    if explicit_world:
+        world = Path(explicit_world).expanduser().resolve()
+    elif v01_run:
+        world = Path(v01_run) / "v01.world"
+    else:
+        world = ASSETS / ".cache" / f"{model}.world"
+    urdf = ASSETS / ".cache" / "waffle.urdf"
     if not (world.is_file() and urdf.is_file()):
         raise RuntimeError("Source ROS Humble and run python3 prepare_scene.py first.")
 
-    paths = [str(ROOT / "models"),
+    paths = [str(ASSETS / "models"),
              str(Path(get_package_share_directory("turtlebot3_gazebo")) / "models"),
              "/usr/share/gazebo-11/models"]
     if os.environ.get("GAZEBO_MODEL_PATH"):
@@ -46,8 +55,13 @@ def simulation(context):
              "-p", ["device:=", LaunchConfiguration("device")],
              "-p", "use_sim_time:=true"],
         condition=IfCondition(LaunchConfiguration("detector")), output="screen")
+    plugin_paths = [str(ASSETS / ".cache" / name)
+                    for name in ("v01-gui-build", "v01-gazebo-build")]
+    if os.environ.get("GAZEBO_PLUGIN_PATH"):
+        plugin_paths.append(os.environ["GAZEBO_PLUGIN_PATH"])
     actions = [
         SetEnvironmentVariable("GAZEBO_MODEL_PATH", os.pathsep.join(paths)),
+        SetEnvironmentVariable("GAZEBO_PLUGIN_PATH", os.pathsep.join(plugin_paths)),
         SetEnvironmentVariable("GAZEBO_MODEL_DATABASE_URI", ""),
         server,
         ExecuteProcess(cmd=["gzclient"], condition=IfCondition(LaunchConfiguration("gui")),
@@ -105,11 +119,12 @@ def generate_launch_description():
         DeclareLaunchArgument("model", default_value="gems", choices=["gems", "subject"]),
         DeclareLaunchArgument("gui", default_value="false", choices=["true", "false"]),
         DeclareLaunchArgument("detector", default_value="true", choices=["true", "false"]),
-        DeclareLaunchArgument("python", default_value=str(ROOT / ".venv/bin/python")),
-        DeclareLaunchArgument("weights", default_value=str(ROOT / "weights/yolov8n.pt")),
+        DeclareLaunchArgument("python", default_value=str(ASSETS / ".venv/bin/python")),
+        DeclareLaunchArgument("weights", default_value=str(ASSETS / "weights/yolov8n.pt")),
         DeclareLaunchArgument("conf", default_value="0.25"),
         DeclareLaunchArgument("imgsz", default_value="640"),
         DeclareLaunchArgument("device", default_value="cuda:0"),
+        DeclareLaunchArgument("world", default_value=""),
         DeclareLaunchArgument("v01_run", default_value=""),
         DeclareLaunchArgument("viewers", default_value="false", choices=["true", "false"]),
         OpaqueFunction(function=simulation),

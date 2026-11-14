@@ -18,6 +18,20 @@ SORT ID 供诊断，融合运动历史结合几何和预测残差维持关联。
 `position_estimator=trimmed_centroid`、`state_estimator=kf` 和安装后的冻结配置。
 两种估计器参数可显式选择历史 AABB/OLS，用于离线或接口回归。
 
-Gazebo 感知演示用 `scripts/run_pedestrian_scene.sh {STATIC|EGO|PERSON|MULTI}`；
-模型、YOLO、SORT、TF 和 LiDAR 适配器来自本机已部署的运行时。闭环控制测试和复算入口
-位于 `~/ros2_experiments/final_mydwa/harness/`。
+也可以运行 `ros2 launch my_dwa_controller pedestrian_fusion.launch.py`，
+该入口使用已有 ROS 话题。设置 `use_sim_time:=true` 可启用仿真时间。
+
+静态场景通过 `ros2 launch my_dwa_controller static_scenario.launch.py scene:=S01` 启动。
+`scene` 接受 S01–S06。Nav2 启动后，使用 RViz 或 NavigateToPose action 发送
+`scenarios/static/scenarios.yaml` 中的目标。
+
+动态场景模板在 `scenarios/dynamic/`。World 引用 TurtleBot3、GEMS 行人模型及
+`libv01_pose.so`，由 Gazebo 的模型与插件搜索路径解析。`visual_prototype/prepare_scene.py`
+从 ROS 包索引生成 Waffle 外参，并准备行人模型。Python 依赖和权重路径见
+`visual_prototype/requirements.txt`。`MYDWA_VISUAL_ASSETS` 可指向仓库外运行资产目录。
+在运行时目录构建好 `.cache/v01-gazebo-build/libv01_pose.so` 后，可用
+`ros2 launch visual_prototype/prototype.launch.py world:=scenarios/dynamic/PERSON/v01.world detector:=false`
+加载场景。运动时序和目标按同目录的 `config.json`、`trial.json` 接入试验驱动。
+
+可选的 Gazebo 感知录制脚本 `scripts/run_pedestrian_scene.sh --help` 列出 R2、SORT、
+LiDAR 运行时目录的配置方式。闭环计时、bag 和逐帧录制保存在仓库外。

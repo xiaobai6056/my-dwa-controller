@@ -1,24 +1,54 @@
-# ROS2 build and runtime output
-/build/
-/install/
-/log/
-/logs/
-/benchmark/results/
-*.log
-*.db3
-*.db3-shm
-*.db3-wal
-*.mcap
-*.bag
-
-# Generated Python/editor files
-__pycache__/
-.pytest_cache/
-*.pyc
+# ROS 2 build and editor output
+build/
+build_*/
+install/
+install_*/
+log/
+log_*/
+logs/
 .vscode/
 *.swp
 
-# Local credentials (example templates may be maintained)
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+.cache/
+
+# Model weights, native build artifacts and archives
+*.[pP][tT]
+*.[pP][tT][hH]
+*.[oO][nN][nN][xX]
+*.[eE][nN][gG][iI][nN][eE]
+*.[wW][eE][iI][gG][hH][tT][sS]
+*.so
+*.so.*
+*.o
+*.deb
+*.[bB][aA][gG]
+*.[dD][bB]3
+*.db3-shm
+*.db3-wal
+*.[mM][cC][aA][pP]
+*.[tT][aA][rR].[gG][zZ]
+*.[zZ][iI][pP]
+
+# Simulation recordings and analysis output
+runs/
+frames/
+results/
+*backup*
+*.[jJ][sS][oO][nN][lL]
+*.[cC][sS][vV]
+*.[lL][oO][gG]
+*.gif
+!/docs/media/*.gif
+/visual_prototype/weights/
+/visual_prototype/models/
+
+# Local credentials and settings
 .env
 .env.*
 !.env.example

@@ -208,6 +208,8 @@ void MyDWAController::configure(
   pedestrian_config_ = pedestrian_config;
   post_loss_cap_enabled_ = post_loss_cap;
   timing_enabled_ = timing;
+  visualization_enabled_ = readParameter(
+    *node, plugin_name_ + ".diagnostics.visualization", false);
   RCLCPP_INFO(
     node->get_logger(), "Crossing yield configured: enabled=%s",
     crossing_yield_ ? "true" : "false");
@@ -324,6 +326,19 @@ void MyDWAController::activate()
     all_dynamic_rejected_cycles_ = 0;
   }
   resetDynamicState();
+  if (visualization_enabled_) {
+    const auto qos = rclcpp::QoS(1).transient_local();
+    global_plan_pub_ = node->create_publisher<nav_msgs::msg::Path>("/my_dwa/demo/global_plan", qos);
+    local_plan_pub_ = node->create_publisher<nav_msgs::msg::Path>("/my_dwa/demo/local_plan", qos);
+    trajectory_pub_ =
+      node->create_publisher<nav_msgs::msg::Path>("/my_dwa/demo/dwa_trajectory", qos);
+    prediction_pub_ = node->create_publisher<visualization_msgs::msg::MarkerArray>(
+      "/my_dwa/demo/predictions", qos);
+    global_plan_pub_->on_activate();
+    local_plan_pub_->on_activate();
+    trajectory_pub_->on_activate();
+    prediction_pub_->on_activate();
+  }
   active_ = true;
 }
 
@@ -332,6 +347,10 @@ void MyDWAController::deactivate()
   std::lock_guard<std::mutex> lock(state_mutex_);
   active_ = false;
   resetDynamicState();
+  global_plan_pub_.reset();
+  local_plan_pub_.reset();
+  trajectory_pub_.reset();
+  prediction_pub_.reset();
   pedestrian_subscription_.reset();
   pedestrian_input_.reset();
   odom_subscription_.reset();
@@ -349,6 +368,10 @@ void MyDWAController::cleanup()
   std::lock_guard<std::mutex> lock(state_mutex_);
   active_ = false;
   resetDynamicState();
+  global_plan_pub_.reset();
+  local_plan_pub_.reset();
+  trajectory_pub_.reset();
+  prediction_pub_.reset();
   pedestrian_subscription_.reset();
   pedestrian_input_.reset();
   odom_subscription_.reset();
@@ -607,6 +630,97 @@ ScoreResult MyDWAController::scoreCandidate(
   return result;
 }
 
+void MyDWAController::publishVisualization(
+  const ControlInputs & inputs, const Trajectory & trajectory,
+  const PedestrianSnapshot & pedestrians, const rclcpp::Time & now)
+{
+  const auto frame = costmap_ros_->getGlobalFrameID();
+  const auto path = [&](const std::vector<Pose2D> & poses) {
+      nav_msgs::msg::Path message;
+      message.header.frame_id = frame;
+      message.header.stamp = now;
+      for (const auto & pose : poses) {
+        auto & point = message.poses.emplace_back();
+        point.header = message.header;
+        point.pose.position.x = pose.x;
+        point.pose.position.y = pose.y;
+        point.pose.orientation.z = std::sin(pose.theta / 2.);
+        point.pose.orientation.w = std::cos(pose.theta / 2.);
+      }
+      return message;
+    };
+  auto global = global_plan_;
+  global.header.stamp = now;
+  global_plan_pub_->publish(global);
+  local_plan_pub_->publish(path(inputs.local_path));
+  trajectory_pub_->publish(path(trajectory.poses));
+
+  using Marker = visualization_msgs::msg::Marker;
+  visualization_msgs::msg::MarkerArray batch;
+  auto & clear = batch.markers.emplace_back();
+  clear.header.frame_id = frame;
+  clear.header.stamp = now;
+  clear.action = Marker::DELETEALL;
+  int id = 0;
+  const bool soft = pedestrian_config_ && pedestrian_config_->soft_growth_enabled;
+  for (const auto & person : pedestrians.people) {
+    for (const double fraction : {0., 1. / 3., 2. / 3., 1.}) {
+      const double t = fraction * person.horizon;
+      for (const bool hard : {true, false}) {
+        if (!soft && !hard) {continue;}
+        const double radius = hard && soft ? person.physical_radius : person.radiusAt(t);
+        auto & ring = batch.markers.emplace_back();
+        ring.header.frame_id = frame;
+        ring.header.stamp = now;
+        ring.ns = hard ? "hard_occupancy" : "soft_envelope";
+        ring.id = id++;
+        ring.type = Marker::LINE_STRIP;
+        ring.action = Marker::ADD;
+        ring.pose.orientation.w = 1.;
+        ring.scale.x = hard ? .024 : .014;
+        ring.color.r = 1.;
+        ring.color.g = hard ? .25 : .72;
+        ring.color.b = .12;
+        ring.color.a = fraction == 0. ? .98 : .62;
+        ring.lifetime = rclcpp::Duration::from_seconds(.4);
+        for (int i = 0; i <= 48; ++i) {
+          const double angle = 6.283185307179586 * i / 48;
+          auto & point = ring.points.emplace_back();
+          point.x = person.x + person.vx * t + radius * std::cos(angle);
+          point.y = person.y + person.vy * t + radius * std::sin(angle);
+          point.z = hard ? .08 : .065;
+        }
+      }
+    }
+    if (std::hypot(person.vx, person.vy) <= .001) {continue;}
+    auto & arrow = batch.markers.emplace_back();
+    arrow.header.frame_id = frame;
+    arrow.header.stamp = now;
+    arrow.ns = "predicted_motion";
+    arrow.id = id++;
+    arrow.type = Marker::ARROW;
+    arrow.action = Marker::ADD;
+    arrow.pose.orientation.w = 1.;
+    arrow.scale.x = .027;
+    arrow.scale.y = .07;
+    arrow.scale.z = .09;
+    arrow.color.r = 1.;
+    arrow.color.g = .83;
+    arrow.color.b = .27;
+    arrow.color.a = 1.;
+    arrow.lifetime = rclcpp::Duration::from_seconds(.4);
+    auto & start = arrow.points.emplace_back();
+    start.x = person.x;
+    start.y = person.y;
+    start.z = .10;
+    auto & end = arrow.points.emplace_back();
+    end.x = person.x + person.vx * person.horizon;
+    end.y = person.y + person.vy * person.horizon;
+    end.z = .10;
+  }
+  prediction_pub_->publish(batch);
+}
+
 Velocity2D MyDWAController::selectBestCandidate(
   const ControlInputs & inputs, const GoalControlContext & goal,
   const std::vector<Velocity2D> & commands, const PedestrianSnapshot & pedestrians,
@@ -830,6 +944,12 @@ Velocity2D MyDWAController::selectBestCandidate(
     out << ']';
   }
   out << '}';
+  if (prediction_pub_) {
+    const bool selected = best && output_command.v == dwa_candidate.v &&
+      output_command.omega == dwa_candidate.omega;
+    publishVisualization(
+      inputs, selected ? feasible[*best].nominal : fallback.trajectory, pedestrians, now);
+  }
   RCLCPP_INFO(node->get_logger(), "Stoppable decision: %s", out.str().c_str());
   return output_command;
 }

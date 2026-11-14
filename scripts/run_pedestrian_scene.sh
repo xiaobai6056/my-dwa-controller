@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
 set -eo pipefail
 
-usage() { printf '%s\n' 'Usage: run_pedestrian_scene.sh {STATIC|EGO|PERSON|MULTI} [--gui]'; }
+usage() {
+    printf '%s\n' 'Usage: run_pedestrian_scene.sh {STATIC|EGO|PERSON|MULTI} [--gui]' \
+        'Set R2_DEMO, SORT_DEMO and STATE_DEMO to the optional simulator runtime directories.' \
+        'Source the workspace overlay or set PED_FUSION_PREFIX to its install base.' \
+        'Set VISUAL_PROTOTYPE to the prepared visual runtime directory if it is external.' \
+        'With --gui, press Enter to start and Ctrl+C to close the windows.'
+}
 if [[ ${1:-} == --help || ${1:-} == -h ]]; then usage; exit 0; fi
 scenario=${1:-}
 case $scenario in
@@ -15,20 +21,24 @@ if [[ ${1:-} == --gui ]]; then gui=true; shift; fi
 (($# == 0)) || { usage >&2; exit 2; }
 
 repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
-export R2_DEMO=${R2_DEMO:-"$HOME/ros2_experiments/r2_vision_lidar_20261112"}
-export SORT_DEMO=${SORT_DEMO:-"$HOME/ros2_experiments/sort_ros2_prototype_20261112"}
-export STATE_DEMO=${STATE_DEMO:-"$HOME/ros2_experiments/state_estimation_compare_20261112"}
+for dependency in R2_DEMO SORT_DEMO STATE_DEMO; do
+    if [[ ! -d ${!dependency:-} ]]; then
+        printf 'Set %s to the corresponding scenario runtime directory.\n' "$dependency" >&2
+        exit 2
+    fi
+    export "$dependency"
+done
 export LIDAR_STATE_BIN=${LIDAR_STATE_BIN:-"$STATE_DEMO/.cache/lidar-build/lidar_state"}
 export VISUAL_PROTOTYPE=${VISUAL_PROTOTYPE:-"$repo/visual_prototype"}
-out=${PED_FUSION_OUT:-"$HOME/ros2_experiments/final_mydwa/local_runs"}
-prefix=${PED_FUSION_PREFIX:-"$HOME/ros2_ws/install"}
+out=${PED_FUSION_OUT:-"$PWD"}
+prefix=${PED_FUSION_PREFIX:-}
 results=${PED_FUSION_RUNS:-"$out/runs"}
-[[ -f $prefix/local_setup.bash ]] || {
-    echo "Build my_dwa_controller and set PED_FUSION_PREFIX to its install base." >&2
+if [[ -n $prefix && ! -r $prefix/local_setup.bash ]]; then
+    echo "PED_FUSION_PREFIX must contain local_setup.bash." >&2
     exit 1
-}
+fi
 source "$SORT_DEMO/environment.sh"
-source "$prefix/local_setup.bash"
+if [[ -n $prefix ]]; then source "$prefix/local_setup.bash"; fi
 ros2 pkg executables my_dwa_controller | grep -qx 'my_dwa_controller pedestrian_fusion' || {
     echo "Build my_dwa_controller and set PED_FUSION_PREFIX to its install base." >&2
     exit 1
@@ -60,12 +70,20 @@ run=$(mktemp -d "$results/$scenario-$(date +%Y%m%d-%H%M%S)-XXXXXX")
 export YOLO_CONFIG_DIR="$run/ultralytics"
 export ROS_LOG_DIR="$run/ros" GAZEBO_LOG_PATH="$run/gazebo" XDG_CONFIG_HOME="$run/gui-config"
 mkdir -p "$YOLO_CONFIG_DIR" "$ROS_LOG_DIR" "$GAZEBO_LOG_PATH" "$XDG_CONFIG_HOME"
-printf 'source %q\nsource %q\nexport ROS_DOMAIN_ID=%q ROS_LOCALHOST_ONLY=1 GAZEBO_MASTER_URI=%q\nunset ROS_DISCOVERY_SERVER\n' \
-    "$SORT_DEMO/environment.sh" "$prefix/local_setup.bash" "$ROS_DOMAIN_ID" "$GAZEBO_MASTER_URI" > "$run/ros_env.sh"
+{
+    printf 'source %q\n' "$SORT_DEMO/environment.sh"
+    if [[ -n $prefix ]]; then printf 'source %q\n' "$prefix/local_setup.bash"; fi
+    printf 'export ROS_DOMAIN_ID=%q ROS_LOCALHOST_ONLY=1 GAZEBO_MASTER_URI=%q\nunset ROS_DISCOVERY_SERVER\n' \
+        "$ROS_DOMAIN_ID" "$GAZEBO_MASTER_URI"
+} > "$run/ros_env.sh"
 exec > >(trap '' INT; tee "$run/launch.log") 2>&1
 echo "Run directory: $run"
 python3 "$STATE_DEMO/prepare_world.py" "$scenario" "$run"
-env --default-signal=INT ros2 launch my_dwa_controller pedestrian_scene.launch.py mode:="$motion" run:="$run" gui:="$gui" &
+launch_args=(my_dwa_controller pedestrian_scene.launch.py mode:="$motion" run:="$run" gui:="$gui")
+if [[ $gui == true ]]; then
+    exec python3 "$repo/scripts/demo_ui_supervisor.py" --recording "$run" "${launch_args[@]}"
+fi
+env --default-signal=INT ros2 launch "${launch_args[@]}" &
 pid=$!
 cleanup() { kill -INT "$pid" 2>/dev/null || true; wait "$pid" || true; }
 trap cleanup EXIT

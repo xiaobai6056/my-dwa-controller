@@ -3,9 +3,9 @@
 <package format="3">
   <name>my_dwa_controller</name>
   <version>1.3.0</version>
-  <description>TODO: Package description</description>
+  <description>DWA controller and multi-pedestrian fusion for ROS 2 Nav2</description>
   <maintainer email="haoxuan@todo.todo">haoxuan</maintainer>
-  <license>TODO: License declaration</license>
+  <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>ament_cmake_python</buildtool_depend>
@@ -24,6 +24,7 @@
   <depend>pluginlib</depend>
   <depend>geometry_msgs</depend>
   <depend>sensor_msgs</depend>
+  <depend>visualization_msgs</depend>
   <depend>eigen</depend>
   <depend>nav2_costmap_2d</depend>
   <depend>nav_msgs</depend>
@@ -38,6 +39,11 @@
   <exec_depend>rosgraph_msgs</exec_depend>
   <exec_depend>rcl_interfaces</exec_depend>
   <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>nav2_bringup</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+  <exec_depend>turtlebot3_gazebo</exec_depend>
   <exec_depend>python3-yaml</exec_depend>
 
   <!-- Optional frozen-input migration replay tool in test/migration. -->

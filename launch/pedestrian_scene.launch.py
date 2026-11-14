@@ -10,10 +10,22 @@ from launch.actions import (DeclareLaunchArgument, ExecuteProcess, OpaqueFunctio
 from launch.event_handlers import OnProcessExit
 from launch.substitutions import LaunchConfiguration
 
-path = Path(os.environ['R2_DEMO']) / 'r2_capture.launch.py'
-spec = spec_from_file_location('r2_capture_launch', path)
-r2 = module_from_spec(spec)
-spec.loader.exec_module(r2)
+
+def load_capture():
+    """Resolve the optional Gazebo capture supplied by the caller."""
+    directory = os.environ.get('R2_DEMO')
+    if not directory:
+        return None
+    path = Path(directory) / 'r2_capture.launch.py'
+    if not path.is_file():
+        raise RuntimeError('R2_DEMO must contain r2_capture.launch.py')
+    spec = spec_from_file_location('r2_capture_launch', path)
+    capture = module_from_spec(spec)
+    spec.loader.exec_module(capture)
+    return capture
+
+
+r2 = load_capture()
 
 
 def fusion(context):
@@ -40,6 +52,8 @@ def fusion(context):
 
 def generate_launch_description():
     """Reuse the R2 capture without altering the world or motion driver."""
+    if r2 is None:
+        raise RuntimeError('Set R2_DEMO for capture or use pedestrian_fusion.launch.py')
     description = r2.generate_launch_description()
     description.add_action(
         DeclareLaunchArgument('position_estimator', default_value='trimmed_centroid'))

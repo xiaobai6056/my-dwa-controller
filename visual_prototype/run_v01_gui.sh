@@ -14,6 +14,7 @@ Usage: ./run_v01_gui.sh {A|B|C} [--config FILE] [--no-viewers] [--headless]
   --headless      Skip all windows, still run and record the scenario
   -h, --help      Show this help
 
+In GUI mode, arrange the windows and press Enter to start motion.
 The GUI remains open after motion ends. Ctrl+C closes this run.
 EOF
 }
@@ -49,12 +50,18 @@ while (($#)); do
     shift
 done
 
-cd -- "$root"
-source /opt/ros/humble/setup.bash
-if [[ ! -r .cache/gems.world || ! -r .cache/waffle.urdf || ! -r weights/yolov8n.pt || ! -x .venv/bin/python ]]; then
-    echo 'Prepare the visual prototype first. See README.md.' >&2
+assets=$(realpath -m -- "${MYDWA_VISUAL_ASSETS:-$root}")
+export MYDWA_VISUAL_ASSETS="$assets"
+if [[ ${ROS_DISTRO:-} != humble ]]; then
+    echo 'Source ROS 2 Humble before running this script.' >&2
     exit 1
 fi
+if [[ ! -r $assets/.cache/gems.world || ! -r $assets/.cache/waffle.urdf ||
+      ! -r $assets/weights/yolov8n.pt || ! -x $assets/.venv/bin/python ]]; then
+    echo 'Prepare the assets and environment described in requirements.txt.' >&2
+    exit 1
+fi
+cd -- "$assets"
 
 # Reserve a domain and its Gazebo port for the lifetime of this launcher.
 # Check sockets as well as the lock so existing local ROS participants are skipped.
@@ -88,15 +95,15 @@ export ROS_LOCALHOST_ONLY=1
 unset ROS_DISCOVERY_SERVER
 export LIBGL_ALWAYS_SOFTWARE=${LIBGL_ALWAYS_SOFTWARE:-1}
 export OMP_NUM_THREADS=${OMP_NUM_THREADS:-2}
-export YOLO_CONFIG_DIR="$root/.cache/ultralytics"
-run=$(mktemp -d "$root/runs/v01-$mode-$(date +%Y%m%d-%H%M%S)-XXXXXX")
+export YOLO_CONFIG_DIR="$assets/.cache/ultralytics"
+run=$(mktemp -d "$assets/runs/v01-$mode-$(date +%Y%m%d-%H%M%S)-XXXXXX")
 export ROS_LOG_DIR="$run/ros"
 export GAZEBO_LOG_PATH="$run/gazebo"
 export XDG_CONFIG_HOME="$run/gui-config"
 mkdir -p "$ROS_LOG_DIR" "$GAZEBO_LOG_PATH" "$XDG_CONFIG_HOME"
 exec > >(trap '' INT; tee "$run/launch.log") 2>&1
 cat > "$run/ros_env.sh" <<EOF
-source /opt/ros/humble/setup.bash
+# Source your ROS 2 environment before loading these run settings.
 export ROS_DOMAIN_ID=$ROS_DOMAIN_ID ROS_LOCALHOST_ONLY=1
 unset ROS_DISCOVERY_SERVER
 export GAZEBO_MASTER_URI=$GAZEBO_MASTER_URI
@@ -108,13 +115,18 @@ echo "Topics: /clock /cmd_vel /visual_prototype/camera/image_raw /visual_prototy
 echo "        /visual_prototype/annotated /visual_prototype/detections /visual_prototype/metrics"
 echo "GUI=$gui image_viewers=$viewers. Ctrl+C closes all processes in this launch."
 echo "For another terminal: source '$run/ros_env.sh'"
-python3 -u v01_config.py "$mode" "$config" "$run"
+python3 -u "$root/v01_config.py" "$mode" "$config" "$run"
 (
     flock 8
-    plugin=.cache/v01-gazebo-build/libv01_pose.so
-    if [[ ! -f $plugin || v01_gazebo/pose_plugin.cpp -nt $plugin || v01_gazebo/CMakeLists.txt -nt $plugin ]]; then
-        cmake -S v01_gazebo -B .cache/v01-gazebo-build -DCMAKE_BUILD_TYPE=Release -DCMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH=FALSE
-        cmake --build .cache/v01-gazebo-build --parallel 2
+    build=.cache/v01-gui-build
+    plugin=$build/libv01_pose.so
+    if [[ ! -f $plugin || $root/v01_gazebo/pose_plugin.cpp -nt $plugin || $root/v01_gazebo/CMakeLists.txt -nt $plugin ]]; then
+        cmake -S "$root/v01_gazebo" -B "$build" -DCMAKE_BUILD_TYPE=Release
+        cmake --build "$build" --parallel 2
     fi
 ) 8>.cache/v01-locks/build.lock
-exec ros2 launch "$root/prototype.launch.py" gui:="$gui" viewers:="$viewers" v01_run:="$run"
+launch_args=("$root/prototype.launch.py" gui:="$gui" viewers:="$viewers" v01_run:="$run")
+if [[ $gui == true ]]; then
+    exec python3 "$root/../scripts/demo_ui_supervisor.py" --recording "$run" "${launch_args[@]}"
+fi
+exec ros2 launch "${launch_args[@]}"

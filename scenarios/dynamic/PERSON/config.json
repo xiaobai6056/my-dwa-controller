@@ -1,0 +1,26 @@
+{
+  "mode": "A",
+  "source": "visual_prototype/v01_modes.json",
+  "description": "Stationary Waffle, pedestrian translates 0.90 m across the camera at 2 m",
+  "robot": {
+    "x_m": 1.02,
+    "y_m": 0,
+    "yaw_rad": 0,
+    "speed_mps": 0.0,
+    "start_s": 0,
+    "duration_s": 0
+  },
+  "pedestrian": {
+    "x_m": 2.069,
+    "y_m": -0.497,
+    "yaw_rad": -1.5707963267948966,
+    "vx_mps": 0,
+    "vy_mps": 0.25,
+    "start_s": 2,
+    "duration_s": 3.6
+  },
+  "hold_s": 2,
+  "experiment_mode": "PERSON",
+  "odometry_source": "encoder",
+  "laser_sensor_type": "gpu_ray"
+}

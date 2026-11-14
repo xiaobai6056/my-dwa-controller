@@ -508,9 +508,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('runs', nargs='+', type=Path)
     parser.add_argument('--output', required=True, type=Path)
-    parser.add_argument('--r2', type=Path, default=Path(os.environ.get(
-        'R2_DEMO', Path.home() / 'ros2_experiments/r2_vision_lidar_20261112')))
+    parser.add_argument('--r2', type=Path, default=os.environ.get('R2_DEMO'),
+                        help='R2 evaluator directory (or set R2_DEMO)')
     args = parser.parse_args()
+    if args.r2 is None or not (args.r2 / 'replay.py').is_file():
+        parser.error('set --r2 or R2_DEMO to a directory containing replay.py')
     sys.path.insert(0, str(args.r2))
     import occupancy
     import projection

@@ -13,6 +13,7 @@
 #include "rclcpp/subscription.hpp"
 #include "nav_msgs/msg/path.hpp"
 #include "nav_msgs/msg/odometry.hpp"
+#include "visualization_msgs/msg/marker_array.hpp"
 #include "my_dwa_controller/quasi_static_observer.hpp"
 #include "my_dwa_controller/motion_predictor.hpp"
 #include "my_dwa_controller/path_handler.hpp"
@@ -90,6 +91,9 @@ private:
     const ControlInputs & inputs, const GoalControlContext & goal,
     const std::vector<Velocity2D> & candidates, const PedestrianSnapshot & pedestrians,
     const rclcpp::Time & now, bool post_loss_active);
+  void publishVisualization(
+    const ControlInputs & inputs, const Trajectory & trajectory,
+    const PedestrianSnapshot & pedestrians, const rclcpp::Time & now);
   void resetDynamicState();
   bool hasMotionRisk(
     const ScanSnapshot & scan, const ControlInputs & inputs, const rclcpp::Time & now,
@@ -128,6 +132,12 @@ private:
   PostLossCap post_loss_cap_;
   bool post_loss_cap_enabled_ = true;
   bool timing_enabled_ = false;
+  bool visualization_enabled_ = false;
+  rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>::SharedPtr global_plan_pub_;
+  rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>::SharedPtr local_plan_pub_;
+  rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>::SharedPtr trajectory_pub_;
+  rclcpp_lifecycle::LifecyclePublisher<visualization_msgs::msg::MarkerArray>::SharedPtr
+    prediction_pub_;
   std::size_t all_dynamic_rejected_cycles_ = 0;
   QuasiStaticObserver quasi_static_;
   std::shared_ptr<RobotStopObserver> robot_stop_;

@@ -1,0 +1,10 @@
+# Run in a Python 3.10 venv with --system-site-packages under ROS 2 Humble.
+# Install rclpy, cv_bridge, vision_msgs and Gazebo ROS packages through ROS.
+# Put YOLO weights in weights/yolov8n.pt under this directory or MYDWA_VISUAL_ASSETS.
+# The detector accepts a custom weights path via its ROS parameter.
+# Example: python3 -m venv --system-site-packages visual_prototype/.venv
+# visual_prototype/.venv/bin/python -m pip install -r visual_prototype/requirements.txt
+# Source ROS 2 Humble, then run python3 visual_prototype/prepare_scene.py for models.
+# Build v01_gazebo with CMake for benchmark worlds requiring libv01_pose.so.
+numpy>=1.24,<2
+ultralytics==8.3.230

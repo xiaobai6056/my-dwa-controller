@@ -3,10 +3,12 @@
 import argparse
 import json
 from math import isfinite
+import os
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parent
+ASSETS = Path(os.environ.get("MYDWA_VISUAL_ASSETS", ROOT)).expanduser().resolve()
 ROBOT = "turtlebot3_waffle"
 PEDESTRIAN = "pedestrian"
 MODES = ("A", "B", "C")
@@ -78,13 +80,12 @@ def sim_label(seconds):
 
 def prepare(mode, config_path, directory):
     config = load_mode(config_path, mode)
-    tree = ET.parse(ROOT / ".cache/gems.world")
+    tree = ET.parse(ASSETS / ".cache/gems.world")
     world = tree.getroot().find("world")
     for entity, actor in ((ROBOT, config["robot"]), (PEDESTRIAN, config["pedestrian"])):
         pose = world.find(f"model[@name='{entity}']/pose")
         pose.text = f"{actor['x_m']} {actor['y_m']} 0 0 0 {actor['yaw_rad']}"
-    pose_plugin = ET.SubElement(world, "plugin", name="v01_pose", filename=str(
-        ROOT / ".cache/v01-gazebo-build/libv01_pose.so"))
+    pose_plugin = ET.SubElement(world, "plugin", name="v01_pose", filename="libv01_pose.so")
     ET.SubElement(ET.SubElement(pose_plugin, "ros"), "namespace").text = "/visual_prototype"
     gui = ET.SubElement(world, "gui", fullscreen="false")
     camera = ET.SubElement(gui, "camera", name="v01_overview")

@@ -1,0 +1,12 @@
+{
+  "scenario": "PERSON",
+  "arm": "on",
+  "start": 0.0,
+  "goal": 1.36,
+  "variant": "same-direction",
+  "transform": [
+    2.069,
+    -1.65,
+    1.5707963267948966
+  ]
+}

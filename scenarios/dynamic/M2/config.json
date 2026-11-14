@@ -1,0 +1,67 @@
+{
+  "mode": "A",
+  "source": "visual_prototype/v01_modes.json",
+  "description": "Same-direction lead walker and diagonal crossing",
+  "robot": {
+    "x_m": 1.02,
+    "y_m": 0,
+    "yaw_rad": 0,
+    "speed_mps": 0.0,
+    "start_s": 0,
+    "duration_s": 0
+  },
+  "hold_s": 2,
+  "experiment_mode": "M2",
+  "odometry_source": "encoder",
+  "laser_sensor_type": "gpu_ray",
+  "pedestrians": [
+    {
+      "name": "pedestrian_1",
+      "yaw_rad": 3.141592653589793,
+      "waypoints": [
+        [
+          0,
+          1.94,
+          0.1
+        ],
+        [
+          1,
+          1.94,
+          0.1
+        ],
+        [
+          11,
+          3.54,
+          0.1
+        ],
+        [
+          14,
+          3.85,
+          0.98
+        ]
+      ]
+    },
+    {
+      "name": "pedestrian_2",
+      "yaw_rad": -1.5707963267948966,
+      "waypoints": [
+        [
+          0,
+          2.63,
+          -0.8
+        ],
+        [
+          2.8,
+          2.63,
+          -0.8
+        ],
+        [
+          8.0,
+          2.39,
+          0.9
+        ]
+      ]
+    }
+  ],
+  "end_s": 16.0
+}

@@ -1,0 +1,108 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Ground grid
+      Enabled: true
+      Alpha: 0.35
+      Cell Size: 0.5
+      Plane Cell Count: 40
+      Reference Frame: <Fixed Frame>
+    - Class: rviz_default_plugins/Map
+      Name: Map
+      Enabled: false
+      Alpha: 0.35
+      Topic:
+        Value: /map
+        Durability Policy: Transient Local
+    - Class: rviz_default_plugins/RobotModel
+      Name: TurtleBot3
+      Enabled: true
+      Description Source: Topic
+      Description Topic:
+        Value: /robot_description
+        Durability Policy: Transient Local
+    - Class: rviz_default_plugins/Polygon
+      Name: Robot footprint
+      Enabled: true
+      Color: 120; 250; 148
+      Topic:
+        Value: /local_costmap/published_footprint
+    - Class: rviz_default_plugins/LaserScan
+      Name: LiDAR returns
+      Enabled: true
+      Color Transformer: FlatColor
+      Color: 112; 133; 153
+      Style: Points
+      Size (Pixels): 3
+      Topic:
+        Value: /scan
+        Reliability Policy: Best Effort
+    - Class: rviz_default_plugins/Path
+      Name: Global path
+      Enabled: true
+      Color: 102; 174; 255
+      Line Style: Billboards
+      Line Width: 0.038
+      Offset: {X: 0, Y: 0, Z: 0.022}
+      Topic:
+        Value: /my_dwa/demo/global_plan
+        Durability Policy: Transient Local
+    - Class: rviz_default_plugins/Path
+      Name: Local reference path
+      Enabled: true
+      Color: 33; 223; 233
+      Line Style: Billboards
+      Line Width: 0.028
+      Offset: {X: 0, Y: 0, Z: 0.046}
+      Topic:
+        Value: /my_dwa/demo/local_plan
+        Durability Policy: Transient Local
+    - Class: rviz_default_plugins/Path
+      Name: DWA trajectory
+      Enabled: true
+      Color: 199; 137; 255
+      Line Style: Billboards
+      Line Width: 0.039
+      Offset: {X: 0, Y: 0, Z: 0.077}
+      Topic:
+        Value: /my_dwa/demo/dwa_trajectory
+        Durability Policy: Transient Local
+    - Class: rviz_default_plugins/Marker
+      Name: Associated LiDAR clusters
+      Enabled: true
+      Topic:
+        Value: /my_dwa/demo/clusters
+    - Class: rviz_default_plugins/MarkerArray
+      Name: Pedestrian forecast (red hard, amber soft)
+      Enabled: true
+      Topic:
+        Value: /my_dwa/demo/predictions
+        Durability Policy: Transient Local
+  Enabled: true
+  Global Options:
+    Background Color: 23; 29; 39
+    Fixed Frame: odom
+    Frame Rate: 30
+  Tools:
+    - Class: rviz_default_plugins/Interact
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+    - Class: rviz_default_plugins/SetGoal
+      Topic:
+        Value: /goal_pose
+  Views:
+    Current:
+      Class: rviz_default_plugins/TopDownOrtho
+      Name: Overhead
+      Scale: 120
+      X: 1.5
+      Y: 0
+      Target Frame: <Fixed Frame>
+      Value: TopDownOrtho (rviz)
+Window Geometry:
+  Width: 1100
+  Height: 760

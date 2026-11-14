@@ -18,6 +18,7 @@ find_package(tf2 REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
 find_package(Eigen3 REQUIRED)
 ament_export_dependencies(Eigen3)
 
@@ -33,7 +34,9 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 )
 ament_export_dependencies(rosidl_default_runtime)
 ament_python_install_package(pedestrian_perception)
-install(PROGRAMS scripts/pedestrian_fusion DESTINATION lib/${PROJECT_NAME})
+install(PROGRAMS scripts/pedestrian_fusion scripts/demo_goal DESTINATION lib/${PROJECT_NAME})
+install(FILES visual_prototype/person_detector.py visual_prototype/v01_scenario.py
+  visual_prototype/v01_config.py DESTINATION share/${PROJECT_NAME}/visual_prototype)
 
 # 轨迹预测独立库；启用 PIC，便于后续链接到 Controller 共享插件。
 add_library(trajectory_predictor STATIC src/trajectory_predictor.cpp)
@@ -290,6 +293,7 @@ ament_target_dependencies(my_dwa_controller_plugin
   pluginlib
   geometry_msgs
   nav_msgs
+  visualization_msgs
   tf2_ros
   tf2
   tf2_geometry_msgs
@@ -348,7 +352,7 @@ install(DIRECTORY include/
   DESTINATION include
 )
 
-install(DIRECTORY config launch
+install(DIRECTORY config launch scenarios
   DESTINATION share/${PROJECT_NAME}
 )
 

@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from functools import lru_cache, partial
 from math import pi
+import os
 from pathlib import Path
 import re
 from struct import unpack_from
@@ -16,8 +17,9 @@ from ament_index_python.packages import get_package_share_directory
 import numpy as np
 
 ROOT = Path(__file__).resolve().parent
-CACHE = ROOT / ".cache"
-MODELS = ROOT / "models"
+ASSETS = Path(os.environ.get("MYDWA_VISUAL_ASSETS", ROOT)).expanduser().resolve()
+CACHE = ASSETS / ".cache"
+MODELS = ASSETS / "models"
 RAW = "https://raw.githubusercontent.com"
 GEMS = (f"{RAW}/npu-ius-lab/Gazebo-Models/"
         "12ff07b6ad6e7e6031b8227854dffeb6f02dffa0/models/Miscellaneous/human_female_1")
