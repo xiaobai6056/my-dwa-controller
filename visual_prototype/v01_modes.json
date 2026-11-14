@@ -1,0 +1,23 @@
+{
+  "A": {
+    "description": "Stationary Waffle, pedestrian translates 0.90 m across the camera at 2 m",
+    "robot": {"x_m": 0, "y_m": 0, "yaw_rad": 0, "speed_mps": 0, "start_s": 0, "duration_s": 0},
+    "pedestrian": {"x_m": 2.069, "y_m": -0.497, "yaw_rad": -1.5707963267948966,
+                   "vx_mps": 0, "vy_mps": 0.25, "start_s": 2, "duration_s": 3.6},
+    "hold_s": 2
+  },
+  "B": {
+    "description": "Waffle drives straight past a pedestrian standing 0.75 m off its path",
+    "robot": {"x_m": 0, "y_m": 0, "yaw_rad": 0, "speed_mps": 0.35, "start_s": 2, "duration_s": 9},
+    "pedestrian": {"x_m": 2.4, "y_m": -0.75, "yaw_rad": -1.5707963267948966,
+                   "vx_mps": 0, "vy_mps": 0, "start_s": 0, "duration_s": 0},
+    "hold_s": 2
+  },
+  "C": {
+    "description": "Waffle advances as the pedestrian crosses ahead and clears the path",
+    "robot": {"x_m": 0, "y_m": 0, "yaw_rad": 0, "speed_mps": 0.28, "start_s": 2.75, "duration_s": 8},
+    "pedestrian": {"x_m": 2.25, "y_m": -0.90, "yaw_rad": -1.5707963267948966,
+                   "vx_mps": 0, "vy_mps": 0.42, "start_s": 2, "duration_s": 4.3},
+    "hold_s": 2
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "aabb": {
+    "sigma_x": 0.01,
+    "sigma_y": 0.01,
+    "enter_speed": 0.024953661399400962,
+    "exit_speed": 0.0336874428891913,
+    "acceleration_density": 0.12,
+    "gate": 9.21034037197618,
+    "dwell_s": 0.4
+  },
+  "trimmed_centroid": {
+    "sigma_x": 0.01,
+    "sigma_y": 0.013645150854754642,
+    "enter_speed": 0.019686736320210976,
+    "exit_speed": 0.02885996053776548,
+    "acceleration_density": 0.12,
+    "gate": 9.21034037197618,
+    "dwell_s": 0.4
+  }
+}

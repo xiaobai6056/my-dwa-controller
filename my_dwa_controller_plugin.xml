@@ -1,0 +1,9 @@
+<library path="my_dwa_controller">
+  <class
+    type="my_dwa_controller::MyDWAController"
+    base_class_type="nav2_core::Controller">
+    <description>
+      Custom DWA-style controller for Nav2.
+    </description>
+  </class>
+</library>
